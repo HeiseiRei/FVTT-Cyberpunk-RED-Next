@@ -1272,6 +1272,8 @@
   "CPR.settings.dvRollTableCompendium.default": "DV System Compendium",
   "CPR.settings.dvRollTableCompendium.help": "Click for more information on custom DV Tables",
   "CPR.settings.dvRollTableCompendium.name": "DV Tables",
+  "CPR.settings.autoCalculateDerivedStats.hint": "Characters only. Changing BODY or WILL recalculates max HP, changing max EMP recalculates max Humanity, and changing Humanity sets current EMP to a tenth of it. Turn off to use the calculator buttons on the sheet instead.",
+  "CPR.settings.autoCalculateDerivedStats.name": "Automatically Calculate Derived Stats",
   "CPR.settings.enablePauseAnimation.hint": "Requires full reload to take effect (Ctrl+F5). Ignored if Foundry Photosensitivity mode is enabled.",
   "CPR.settings.enablePauseAnimation.name": "Enable Pause Animation",
   "CPR.settings.invertRollCtrlFunction.hint": "When enabled, roll dialogs are skipped by default and enabled when holding CTRL (or COMMAND for MacOS)",

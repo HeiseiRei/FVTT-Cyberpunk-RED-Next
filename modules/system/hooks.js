@@ -8,6 +8,7 @@ import LOGGER from "../utils/cpr-logger.js";
  * before this change anyway
  */
 const hooksImports = [
+  "actor/auto-derived-stats.js",
   "actor/check-emp-and-luck.js",
   "actor/set-default-image.js",
   "actor/sheet/persist-section-views.js",

@@ -177,6 +177,19 @@ const registerSystemSettings = () => {
     },
   });
 
+  // Recalculate max HP, max Humanity and EMP when the stats they derive from change
+  game.settings.register(game.system.id, "autoCalculateDerivedStats", {
+    name: "CPR.settings.autoCalculateDerivedStats.name",
+    hint: "CPR.settings.autoCalculateDerivedStats.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: (value) => {
+      LOGGER.log(`Changed autoCalculateDerivedStats to ${value}`);
+    },
+  });
+
   // Show a confirmation prompt before deleting an item from a sheet
   game.settings.register(game.system.id, "deleteItemConfirmation", {
     name: "CPR.settings.deleteConfirmation.name",
