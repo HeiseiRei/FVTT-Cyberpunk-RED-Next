@@ -68,6 +68,8 @@ export default class CPRTargeting {
         dv: null,
         outOfRange: false,
         hit: null,
+        // How far the attack beat the DV by; Autofire multiplies its damage by this.
+        margin: 1,
         canEvade: this.#canEvade(target.actor, isRanged),
       };
 
@@ -85,6 +87,7 @@ export default class CPRTargeting {
             result.dv = dvResult.dv;
             // The attack has to beat the DV; a tie is a miss.
             result.hit = total > dvResult.dv;
+            result.margin = Math.max(1, total - dvResult.dv);
           }
         }
       }

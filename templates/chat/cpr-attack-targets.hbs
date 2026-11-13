@@ -28,13 +28,39 @@
                    data-action="rollEvasion"
                    data-actor-id="{{target.actorId}}"
                    data-token-id="{{target.tokenId}}"
+                   data-scene-id="{{target.sceneId}}"
                    data-attack-total="{{../resultTotal}}"
                    data-attacker-name="{{../attackerName}}"
+                   data-attacker-actor-id="{{../attack.actorId}}"
+                   data-attacker-token-id="{{../attack.tokenId}}"
+                   data-attacker-scene-id="{{../attack.sceneId}}"
+                   data-attack-item-id="{{../attack.itemId}}"
+                   data-attack-type="{{../attack.type}}"
+                   data-attack-location="{{../attack.location}}"
                    data-tooltip="{{localize "CPR.chat.attackTargets.evadeHint"}}">
                   <i class="fas fa-person-running"></i> {{localize "CPR.chat.attackTargets.evade"}}
                 </a>
               {{/unless}}
             {{/if}}
+            {{#unless target.outOfRange }}
+              {{#unless (cprCompare target.hit "===" false)}}
+                <a class="clickable cpr-attack-target-damage"
+                   data-action="autoDamage"
+                   data-actor-id="{{target.actorId}}"
+                   data-token-id="{{target.tokenId}}"
+                   data-scene-id="{{target.sceneId}}"
+                   data-margin="{{target.margin}}"
+                   data-attacker-actor-id="{{../attack.actorId}}"
+                   data-attacker-token-id="{{../attack.tokenId}}"
+                   data-attacker-scene-id="{{../attack.sceneId}}"
+                   data-attack-item-id="{{../attack.itemId}}"
+                   data-attack-type="{{../attack.type}}"
+                   data-attack-location="{{../attack.location}}"
+                   data-tooltip="{{localize "CPR.chat.attackTargets.damageHint"}}">
+                  <i class="fas fa-droplet"></i>
+                </a>
+              {{/unless}}
+            {{/unless}}
           </div>
         </div>
       {{/each}}

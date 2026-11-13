@@ -17,6 +17,7 @@
       "url": "https://github.com/HeiseiRei/FVTT-Cyberpunk-RED-ND-Core"
     }
   ],
+  "socket": true,
   "esmodules": [
     "cpr.js"
   ],

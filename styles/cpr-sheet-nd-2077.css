@@ -1095,3 +1095,20 @@
   background: var(--cpr-chat-action-hover);
   text-shadow: none;
 }
+
+.cpr-combat-card a.cpr-attack-target-damage {
+  align-items: center;
+  border: 1px solid var(--cpr-chat-failure);
+  border-radius: 0.2rem;
+  color: var(--cpr-chat-failure);
+  display: inline-flex;
+  justify-content: center;
+  min-height: 1.5rem;
+  min-width: 1.5rem;
+}
+
+.cpr-combat-card a.cpr-attack-target-damage:hover {
+  background: var(--cpr-chat-failure);
+  color: var(--cpr-chat-action-text);
+  text-shadow: none;
+}
