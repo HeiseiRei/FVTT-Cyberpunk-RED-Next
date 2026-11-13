@@ -1,7 +1,6 @@
 {{!-- taken from Foundry code in resources/app/templates/sheets/active-effect-config.html --}}
 {{!-- We are assuming this sheet is never shown for effects on owned items, since they cannot be changed --}}
-<form>
-  <div class="active-effects-sheet">
+<div class="active-effects-sheet">
     <!-- Effect Header -->
     <header class="sheet-header">
       <img class="effect-icon" src="{{effect.img}}" data-edit="img"/>
@@ -23,7 +22,7 @@
       <div class="form-group">
         <label>{{ localize "EFFECT.FIELDS.img.label" }}</label>
         <div class="form-fields">
-          <file-picker type="image" name="img" value="{{effect.img}}">
+          <file-picker type="image" name="img" value="{{effect.img}}"></file-picker>
         </div>
       </div>
       <div class="form-group">
@@ -109,4 +108,3 @@
   </button>
 </footer>
 </div>
-</form>

@@ -2,5 +2,6 @@
   <img class="mook-image-block-img"
        src="{{actor.img}}"
        data-edit="img"
+       {{#if editable}}data-action="editImage"{{/if}}
        data-tooltip="{{actor.name}}"/>
 </div>

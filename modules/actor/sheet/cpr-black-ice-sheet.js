@@ -5,33 +5,59 @@ import createImageContextMenu from "../../utils/cpr-imageContextMenu.js";
 import CPRDialog from "../../dialog/cpr-dialog-application.js";
 
 const TextEditor = foundry.applications.ux.TextEditor.implementation;
+const { ActorSheetV2 } = foundry.applications.sheets;
+const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
- * Implement the Black-ICE sheet, which extends ActorSheet directly from Foundry. This does
- * not extend CPRActor, as there is very little overlap between Black-ICE and mooks/characters.
+ * Implement the Black-ICE sheet, which extends ActorSheetV2 directly from Foundry. This does
+ * not extend CPRActorSheet, as there is very little overlap between Black-ICE and mooks/characters.
  *
- * @extends {ActorSheet}
+ * @extends {ActorSheetV2}
  */
-export default class CPRBlackIceActorSheet extends foundry.appv1.sheets.ActorSheet {
+export default class CPRBlackIceActorSheet extends HandlebarsApplicationMixin(
+  ActorSheetV2
+) {
+  static DEFAULT_OPTIONS = {
+    classes: ["sheet", "actor", "cpr-black-ice-sheet-v2"],
+    position: { width: 575 },
+    window: { icon: "fa-solid fa-ghost", resizable: true },
+    form: {
+      submitOnChange: true,
+      closeOnSubmit: false,
+    },
+  };
+
+  static PARTS = {
+    sheet: {
+      template:
+        "systems/cyberpunk-red-core/templates/actor/cpr-black-ice-sheet.hbs",
+      scrollable: [""],
+    },
+  };
+
   /**
-   * Set up the default options for this Foundry "app".
-   * See https://foundryvtt.com/api/v12/classes/client.Application.html for the complete list of options available.
+   * The token this sheet was opened for, if any. Always a TokenDocument or null.
+   *
+   * @returns {TokenDocument|null}
+   */
+  get token() {
+    return this.options.token ?? this.document.token ?? null;
+  }
+
+  /**
+   * Honor the "resizeCPRSheets" system setting: a fixed starting height when it is enabled,
+   * and an automatic height otherwise.
    *
    * @override
-   * @static
    */
-  static get defaultOptions() {
+  _initializeApplicationOptions(options) {
+    const applicationOptions = super._initializeApplicationOptions(options);
     const resizeCPRSheets = game.settings.get(
       game.system.id,
       "resizeCPRSheets"
     );
-
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      height: resizeCPRSheets ? 250 : "auto",
-      resizable: true,
-      template: `systems/${game.system.id}/templates/actor/cpr-black-ice-sheet.hbs`,
-      width: 575,
-    });
+    applicationOptions.position.height = resizeCPRSheets ? 250 : "auto";
+    return applicationOptions;
   }
 
   /**
@@ -40,12 +66,23 @@ export default class CPRBlackIceActorSheet extends foundry.appv1.sheets.ActorShe
    * object it is tied to. (this.actor)
    *
    * @override
-   * @returns {Object} data - a curated structure of actorSheet data
+   * @returns {Object} context - a curated structure of actorSheet data
    */
-  async getData() {
-    const foundryData = await super.getData();
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
+    const { actor } = this;
+    const foundryData = {
+      ...context,
+      actor,
+      data: actor.toObject(false),
+      editable: this.isEditable,
+      owner: actor.isOwner,
+      limited: actor.limited,
+      title: this.title,
+      cssClass: this.isEditable ? "editable" : "locked",
+    };
 
-    foundryData.enrichedHTML = [];
+    foundryData.enrichedHTML = {};
     foundryData.enrichedHTML.notes = await TextEditor.enrichHTML(
       this.actor.system.notes,
       { async: true }
@@ -105,19 +142,28 @@ export default class CPRBlackIceActorSheet extends foundry.appv1.sheets.ActorShe
   }
 
   /**
-   * Activate listeners for the sheet. This has to call super at the end for Foundry to process
-   * events properly.
+   * The image context menu is delegated from the application element, which survives re-renders,
+   * so it is created once rather than on every render.
    *
    * @override
-   * @param {Object} html - the DOM object
    */
-  activateListeners(html) {
+  async _onFirstRender(context, options) {
+    await super._onFirstRender(context, options);
+    this._createBlackIceImageContextMenu(this.element);
+  }
+
+  /**
+   * Activate listeners for the sheet after each render.
+   *
+   * @override
+   */
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    const html = $(this.element);
     html.find(".rollable").click((event) => this._onRoll(event));
     html
       .find(".configure-from-program")
       .click((event) => this._configureFromProgram(event));
-    this._createBlackIceImageContextMenu(html);
-    super.activateListeners(html);
   }
 
   /**
@@ -257,17 +303,17 @@ export default class CPRBlackIceActorSheet extends foundry.appv1.sheets.ActorShe
         program.uuid
       );
     }
-    this.render(true, { renderData: this.actor.system });
+    this.render({ force: true });
   }
 
   /**
    * Sets up a ContextMenu that appears when the Actor's image is right clicked.
    * Enables the user to share the image with other players.
    *
-   * @param {Object} html - The DOM object
+   * @param {HTMLElement} html - The application element
    * @returns {ContextMenu} The created ContextMenu
    */
   _createBlackIceImageContextMenu(html) {
-    return createImageContextMenu(html, ".bice-icon", this.actor);
+    return createImageContextMenu(html, ".blackice-image", this.actor);
   }
 }

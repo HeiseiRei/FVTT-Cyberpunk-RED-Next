@@ -20,7 +20,7 @@ export default class CPRLedger extends CPRDialog {
     this.propName = propName;
     this.ledgername = "CPR.ledger.".concat(propName.toLowerCase());
     // Set title.
-    this.options.title = SystemUtils.Format("CPR.ledger.title", {
+    this.dialogOptions.title = SystemUtils.Format("CPR.ledger.title", {
       property: SystemUtils.Localize(this.ledgername),
     });
     this.contents = actor.listRecords(propName);
@@ -28,25 +28,35 @@ export default class CPRLedger extends CPRDialog {
   }
 
   /**
-   * Set default options for the ledger.
-   * See https://foundryvtt.com/api/v12/classes/client.Application.html for the complete list of options available.
+   * The ledger opens wider than a regular dialog, and at a fixed height when the
+   * "resize CPR sheets" setting is enabled.
    *
-   * @static
    * @override
    */
-  static get defaultOptions() {
+  _initializeApplicationOptions(options) {
+    const applicationOptions = super._initializeApplicationOptions(options);
     const resizeCPRSheets = game.settings.get(
       game.system.id,
       "resizeCPRSheets"
     );
+    applicationOptions.position.width = options.position?.width ?? 600;
+    applicationOptions.position.height =
+      options.position?.height ?? (resizeCPRSheets ? 340 : "auto");
+    return applicationOptions;
+  }
 
-    return foundry.utils.mergeObject(super.defaultOptions, {
+  /**
+   * Set default options for the ledger. The ledger form is never merged into the ledger
+   * property; its inputs are read when one of the ledger buttons is pressed.
+   *
+   * @static
+   * @override
+   */
+  static get defaultDialogOptions() {
+    return foundry.utils.mergeObject(super.defaultDialogOptions, {
       // The title is set in the constructor above.
-      closeOnSubmit: false,
-      height: resizeCPRSheets ? 340 : "auto",
       submitOnChange: false,
       template: `systems/${game.system.id}/templates/dialog/cpr-ledger-form.hbs`,
-      width: 600,
     });
   }
 
@@ -55,7 +65,7 @@ export default class CPRLedger extends CPRDialog {
    *
    * @return {Object} - a structured object representing ledger data.
    */
-  async getData() {
+  async _prepareContext() {
     const data = {
       total: this.total,
       ledgername: this.ledgername,
@@ -70,7 +80,7 @@ export default class CPRLedger extends CPRDialog {
    *
    * @param {*} html - the DOM object
    */
-  activateListeners(html) {
+  _activateListeners(html) {
     html
       .find(".delete-ledger-line")
       .click((event) => this._deleteLedgerLine(event));
@@ -79,7 +89,7 @@ export default class CPRLedger extends CPRDialog {
       .find(".ledger-edit-button")
       .click((event) => this._updateLedger(this.propName, event));
 
-    super.activateListeners(html);
+    super._activateListeners(html);
   }
 
   /**
@@ -92,8 +102,9 @@ export default class CPRLedger extends CPRDialog {
    * @param {*} event - object with details of the event
    */
   _updateLedger(ledgerProp, event) {
-    let { value } = this.form[0];
-    const reason = this.form[1].value;
+    const { elements } = this.form;
+    let { value } = elements.modifyValue;
+    const reason = elements.reason.value;
     let action = SystemUtils.GetEventDatum(event, "data-action");
     if (value !== "") {
       value = parseInt(value, 10);

@@ -3,27 +3,59 @@ import SystemUtils from "../../utils/cpr-systemUtils.js";
 import createImageContextMenu from "../../utils/cpr-imageContextMenu.js";
 
 const TextEditor = foundry.applications.ux.TextEditor.implementation;
+const { ActorSheetV2 } = foundry.applications.sheets;
+const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
- * Implement the Demon sheet, which extends ActorSheet directly from Foundry. This does
- * not extend CPRActor, as there is very little overlap between Demons and mooks/characters.
+ * Implement the Demon sheet, which extends ActorSheetV2 directly from Foundry. This does
+ * not extend CPRActorSheet, as there is very little overlap between Demons and mooks/characters.
  *
- * @extends {ActorSheet}
+ * @extends {ActorSheetV2}
  */
-export default class CPRDemonActorSheet extends foundry.appv1.sheets.ActorSheet {
-  /** @override */
-  static get defaultOptions() {
+export default class CPRDemonActorSheet extends HandlebarsApplicationMixin(
+  ActorSheetV2
+) {
+  static DEFAULT_OPTIONS = {
+    classes: ["sheet", "actor", "cpr-demon-sheet-v2"],
+    position: { width: 600 },
+    window: { icon: "fa-solid fa-skull", resizable: true },
+    form: {
+      submitOnChange: true,
+      closeOnSubmit: false,
+    },
+  };
+
+  static PARTS = {
+    sheet: {
+      template:
+        "systems/cyberpunk-red-core/templates/actor/cpr-demon-sheet.hbs",
+      scrollable: [""],
+    },
+  };
+
+  /**
+   * The token this sheet was opened for, if any. Always a TokenDocument or null.
+   *
+   * @returns {TokenDocument|null}
+   */
+  get token() {
+    return this.options.token ?? this.document.token ?? null;
+  }
+
+  /**
+   * Honor the "resizeCPRSheets" system setting: a fixed starting height when it is enabled,
+   * and an automatic height otherwise.
+   *
+   * @override
+   */
+  _initializeApplicationOptions(options) {
+    const applicationOptions = super._initializeApplicationOptions(options);
     const resizeCPRSheets = game.settings.get(
       game.system.id,
       "resizeCPRSheets"
     );
-
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      height: resizeCPRSheets ? 275 : "auto",
-      resizable: true,
-      template: `systems/${game.system.id}/templates/actor/cpr-demon-sheet.hbs`,
-      width: 600,
-    });
+    applicationOptions.position.height = resizeCPRSheets ? 275 : "auto";
+    return applicationOptions;
   }
 
   /**
@@ -32,11 +64,22 @@ export default class CPRDemonActorSheet extends foundry.appv1.sheets.ActorSheet 
    * object it is tied to. (this.actor)
    *
    * @override
-   * @returns {Object} data - a curated structure of actorSheet data
+   * @returns {Object} context - a curated structure of actorSheet data
    */
-  async getData() {
-    const sheetData = await super.getData();
-    sheetData.enrichedHTML = [];
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
+    const { actor } = this;
+    const sheetData = {
+      ...context,
+      actor,
+      data: actor.toObject(false),
+      editable: this.isEditable,
+      owner: actor.isOwner,
+      limited: actor.limited,
+      title: this.title,
+      cssClass: this.isEditable ? "editable" : "locked",
+    };
+    sheetData.enrichedHTML = {};
     sheetData.enrichedHTML.notes = await TextEditor.enrichHTML(
       this.actor.system.notes,
       { async: true }
@@ -45,16 +88,26 @@ export default class CPRDemonActorSheet extends foundry.appv1.sheets.ActorSheet 
   }
 
   /**
-   * Activate listeners for the sheet. This has to call super at the end for Foundry to process
-   * events properly.
+   * The image context menu is delegated from the application element, which survives re-renders,
+   * so it is created once rather than on every render.
    *
    * @override
-   * @param {Object} html - the DOM object
    */
-  activateListeners(html) {
-    html.find(".rollable").click((event) => this._onRoll(event));
-    this._createDemonImageContextMenu(html);
-    super.activateListeners(html);
+  async _onFirstRender(context, options) {
+    await super._onFirstRender(context, options);
+    this._createDemonImageContextMenu(this.element);
+  }
+
+  /**
+   * Activate listeners for the sheet after each render.
+   *
+   * @override
+   */
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    $(this.element)
+      .find(".rollable")
+      .click((event) => this._onRoll(event));
   }
 
   /**
@@ -86,10 +139,10 @@ export default class CPRDemonActorSheet extends foundry.appv1.sheets.ActorSheet 
    * Sets up a ContextMenu that appears when the Actor's image is right clicked.
    * Enables the user to share the image with other players.
    *
-   * @param {Object} html - The DOM object
+   * @param {HTMLElement} html - The application element
    * @returns {object} The created ContextMenu
    */
   _createDemonImageContextMenu(html) {
-    return createImageContextMenu(html, ".demon-icon", this.actor);
+    return createImageContextMenu(html, ".demon-image", this.actor);
   }
 }

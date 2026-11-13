@@ -9,26 +9,15 @@ const ResizeTypeTag = () => {
    * @param {CPRActorSheet} app - application object (unused)
    * @param {Object} html - HTML DOM object
    */
-  // Run on Actor Sheets
-  Hooks.on("renderActorSheet", (_, html) => {
-    window.requestAnimationFrame(() => {
-      SheetUtils.setCssClassWidth(html, ".type-tag");
-    });
-  });
+  // Every CPR Actor Sheet is an AppV2 application, so one hook covers them all.
   Hooks.on("renderApplicationV2", (app) => {
     if (!app.element?.querySelector(".type-tag")) return;
     window.requestAnimationFrame(() => {
       SheetUtils.setCssClassWidth($(app.element), ".type-tag");
     });
   });
-  // Run on Item Sheets
-  // This should arguably be in items/sheet/resize-type-tag.js but it's
-  // probably fine here as it's exactly the same as the Actor hook.
-  Hooks.on("renderItemSheet", (_, html) => {
-    window.requestAnimationFrame(() => {
-      SheetUtils.setCssClassWidth(html, ".type-tag");
-    });
-  });
+  // Item Sheets are AppV2 applications (CPRItemSheet), so the renderApplicationV2
+  // hook above covers them as well.
 };
 
 export default ResizeTypeTag;

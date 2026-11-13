@@ -545,7 +545,6 @@ export default function initializeDistanceDv() {
   Hooks.on("renderApplicationV2", (app, element) => {
     if (app.actor || app.document) addWeaponSelectors(app, element);
   });
-  Hooks.on("renderActorSheet", (app, element) => addWeaponSelectors(app, element));
   Hooks.on("renderApplicationV2", (app, element) => {
     if (app.actor) addWeaponSelectors(app, element);
   });

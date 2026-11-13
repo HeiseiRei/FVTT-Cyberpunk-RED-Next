@@ -672,44 +672,53 @@ export default class CPRCharacterActorSheetND extends CPRCharacterActorSheetV2 {
     }).join("");
     const instructions = game.i18n.localize("CPR.characterSheetND.weaponReplaceInstructions");
     const prompt = game.i18n.localize("CPR.characterSheetND.weaponReplacePrompt");
+    const content = `<section class="cpr-nd-weapon-replacement-content"><div class="cpr-nd-weapon-replacement-alert"><span class="cpr-nd-weapon-replacement-kicker">${escapeHtml(prompt)}</span><strong>${escapeHtml(weapon.name)}</strong></div><p class="cpr-nd-weapon-replacement-instructions">${escapeHtml(instructions)}</p><fieldset class="cpr-nd-weapon-replacement-options" role="radiogroup" aria-label="${escapeHtml(instructions)}">${choices}</fieldset></section>`;
     let settled = false;
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const finish = (value) => {
         if (settled) return;
         settled = true;
         resolve(value);
       };
-      new Dialog({
-        title: game.i18n.localize("CPR.characterSheetND.weaponReplaceTitle"),
-        content: `<section class="cpr-nd-weapon-replacement-content"><div class="cpr-nd-weapon-replacement-alert"><span class="cpr-nd-weapon-replacement-kicker">${escapeHtml(prompt)}</span><strong>${escapeHtml(weapon.name)}</strong></div><p class="cpr-nd-weapon-replacement-instructions">${escapeHtml(instructions)}</p><fieldset class="cpr-nd-weapon-replacement-options" role="radiogroup" aria-label="${escapeHtml(instructions)}">${choices}</fieldset></section>`,
-        render: (html) => {
-          html.closest(".window-app")
-            .addClass("cpr-nd-weapon-replacement-dialog cpr-nd-dialog");
-          html.find("[data-weapon-replacement]").on("click", (event) => {
-            const selected = event.currentTarget;
-            html.find("[data-weapon-replacement]")
-              .attr("aria-checked", "false")
-              .removeClass("is-selected");
-            selected.setAttribute("aria-checked", "true");
-            selected.classList.add("is-selected");
-          });
-        },
-        buttons: {
-          replace: {
+      const dialog = new foundry.applications.api.DialogV2({
+        window: { title: game.i18n.localize("CPR.characterSheetND.weaponReplaceTitle") },
+        classes: ["cpr-nd-weapon-replacement-dialog", "cpr-nd-dialog"],
+        content,
+        buttons: [
+          {
+            action: "replace",
             label: game.i18n.localize("CPR.characterSheetND.weaponReplaceConfirm"),
-            callback: (html) => {
-              const selected = Number(html.find('[data-weapon-replacement][aria-checked="true"]').attr("data-weapon-replacement"));
-              finish(Number.isInteger(selected) ? options[selected] ?? null : null);
+            default: true,
+            callback: (event, button) => {
+              const selected = Number(
+                button.form
+                  ?.querySelector('[data-weapon-replacement][aria-checked="true"]')
+                  ?.dataset.weaponReplacement
+              );
+              return Number.isInteger(selected) ? options[selected] ?? null : null;
             },
           },
-          cancel: {
+          {
+            action: "cancel",
             label: game.i18n.localize("CPR.characterSheetND.weaponReplaceCancel"),
-            callback: () => finish(null),
+            callback: () => null,
           },
-        },
-        default: "replace",
-        close: () => finish(null),
-      }).render(true);
+        ],
+        // A button without a usable result resolves with its action name instead.
+        submit: (result) => finish(Array.isArray(result) ? result : null),
+      });
+      dialog.addEventListener("close", () => finish(null), { once: true });
+      dialog.render({ force: true }).then(() => {
+        const choiceButtons = dialog.element.querySelectorAll("[data-weapon-replacement]");
+        for (const choice of choiceButtons) {
+          choice.addEventListener("click", () => {
+            for (const other of choiceButtons) {
+              other.setAttribute("aria-checked", String(other === choice));
+              other.classList.toggle("is-selected", other === choice);
+            }
+          });
+        }
+      }).catch(reject);
     });
   }
 

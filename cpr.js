@@ -59,11 +59,12 @@ import MigrationError from "./modules/system/migrate/migration-error.js";
 Hooks.once("init", async () => {
   LOGGER.log("THANK YOU TO EVERYONE WHO HELPED!!!!");
   LOGGER.credits();
-  // Removes "Default Actor Sheet" option from sheet style selection and prevents users from breaking blackICE, containers, and demons
-  foundry.documents.collections.Actors.unregisterSheet(
-    "core",
-    foundry.appv1.sheets.ActorSheet
-  );
+  // Removes "Default Actor Sheet" option from sheet style selection and prevents users from breaking blackICE, containers, and demons.
+  // No CPR sheet extends it any more; Foundry core still registers the AppV1 ActorSheet as its default while that class exists.
+  const coreActorSheet = foundry.appv1?.sheets?.ActorSheet;
+  if (coreActorSheet) {
+    foundry.documents.collections.Actors.unregisterSheet("core", coreActorSheet);
+  }
   // Register Actor Sheet Application Classes
   foundry.documents.collections.Actors.registerSheet(
     game.system.id,
@@ -134,9 +135,14 @@ Hooks.once("init", async () => {
   );
 
   // Register Item Sheet Application Classes
+  // Remove whichever default Item sheet core registered, so only the CPR sheet is offered.
+  const coreItemSheet = foundry.appv1?.sheets?.ItemSheet;
+  if (coreItemSheet) {
+    foundry.documents.collections.Items.unregisterSheet("core", coreItemSheet);
+  }
   foundry.documents.collections.Items.unregisterSheet(
     "core",
-    foundry.appv1.sheets.ItemSheet
+    foundry.applications.sheets.ItemSheetV2
   );
   foundry.documents.collections.Items.registerSheet(
     game.system.id,

@@ -15,12 +15,12 @@ const HandlebarsApplicationMixin =
   foundry.applications.api.HandlebarsApplicationMixin;
 
 /**
- * Extend the basic ActorSheet, which comes from Foundry. Not all sheets used in
- * this system module may extend from this. Others also extend ActorSheet. CPRActor
- * is used for common code between Mook sheets and Character sheets.
- * @extends {ActorSheet}
+ * Extend the AppV2 ActorSheet, which comes from Foundry. Not all sheets used in
+ * this system module may extend from this. Others also extend ActorSheetV2 directly.
+ * CPRActorSheet is used for common code between Mook, Container and Character sheets.
+ * @extends {ActorSheetV2}
  */
-function CPRActorSheetMixin(Base, isV2 = false) {
+function CPRActorSheetMixin(Base) {
   return class CPRActorSheet extends Base {
   /**
    * We extend the constructor to initialize data structures used for tracking parts of the sheet
@@ -28,12 +28,10 @@ function CPRActorSheetMixin(Base, isV2 = false) {
    * User Settings if they exist.
    *
    * @constructor
-   * @param {*} actor - the actor object associated with this sheet
-   * @param {*} options - entity options passed up the chain
+   * @param {Object} options - application options passed up the chain ({ document, ... })
    */
-  constructor(actor, options) {
-    if (isV2) super(actor);
-    else super(actor, options);
+  constructor(options) {
+    super(options);
     this.collapsedSections = [];
     const collapsedSections = SystemUtils.GetUserSetting(
       "sheetConfig",
@@ -44,51 +42,49 @@ function CPRActorSheetMixin(Base, isV2 = false) {
       this.collapsedSections = collapsedSections;
     }
 
-    if (!isV2) this.options.collapsedSections = this.collapsedSections;
     this.cprContentFilter = "";
   }
 
   /**
-   * The scrollY option identifies elements where the
-   * vertical position should be preserved during a re-render.
+   * The token this sheet was opened for, if any. Always a TokenDocument or null.
    *
-   * See https://foundryvtt.com/api/v12/classes/client.Application.html for the complete list of options available.
+   * @returns {TokenDocument|null}
+   */
+  get token() {
+    return this.options.token ?? this.document.token ?? null;
+  }
+
+  /**
+   * Sheets which define a static CPR_RESIZED_HEIGHT honor the "resizeCPRSheets" system setting:
+   * a fixed starting height when it is enabled, and an automatic height otherwise.
    *
    * @override
-   * @returns - sheet options merged with default options in ActorSheet
    */
-  static get defaultOptions() {
-    if (isV2) return {};
-    const resizeCPRSheets = game.settings.get(
-      game.system.id,
-      "resizeCPRSheets"
-    );
-
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: super.defaultOptions.classes.concat(["sheet", "actor"]),
-      height: resizeCPRSheets ? 500 : "auto",
-      resizable: true,
-      scrollY: [".right-content-section", ".top-pane-gear"],
-      width: 800,
-    });
+  _initializeApplicationOptions(options) {
+    const applicationOptions = super._initializeApplicationOptions(options);
+    const resizedHeight = this.constructor.CPR_RESIZED_HEIGHT;
+    if (resizedHeight) {
+      const resizeCPRSheets = game.settings.get(
+        game.system.id,
+        "resizeCPRSheets"
+      );
+      applicationOptions.position.height = resizeCPRSheets
+        ? resizedHeight
+        : "auto";
+    }
+    return applicationOptions;
   }
 
   /**
    * Get actor data into a more convenient organized structure. This should be called sparingly in code.
-   * Only add new data points to getData when you need a complex struct, not when you only need to add
+   * Only add new data points to the context when you need a complex struct, not when you only need to add
    * new data points to shorten dataPaths. Remember, this data is on the CPRActorSheet object, not the
    * CPRActor object it is tied to. (this.actor)
    *
    * @override
-   * @returns {Object} data - a curated structure of actorSheet data
+   * @returns {Object} context - a curated structure of actorSheet data
    */
-  async getData() {
-    const foundryData = await super.getData();
-    return this._prepareCPRContext(foundryData);
-  }
-
   async _prepareContext(options) {
-    if (!isV2) return {};
     const context = await super._prepareContext(options);
     const actor = this.actor;
     const data = actor.toObject(false);
@@ -239,14 +235,12 @@ function CPRActorSheetMixin(Base, isV2 = false) {
       );
     }
 
-    const sheet = isV2
-      ? {
-          options: {
-            collapsedSections: this.collapsedSections,
-            cprContentFilter: this.cprContentFilter,
-          },
-        }
-      : this;
+    const sheet = {
+      options: {
+        collapsedSections: this.collapsedSections,
+        cprContentFilter: this.cprContentFilter,
+      },
+    };
     return { ...foundryData, ...cprData, sheet };
   }
 
@@ -352,20 +346,66 @@ function CPRActorSheetMixin(Base, isV2 = false) {
   }
 
   /**
-   * Activate listeners for the sheet. This should be only common listeners across Mook and Character sheets.
-   * This has to call super at the end for Foundry to process events properly and get built-in functionality
-   * like dragging items to sheets.
+   * The image context menu is delegated from the application element, which survives re-renders,
+   * so it is created once rather than on every render.
    *
    * @override
-   * @param {Object} html - the DOM object
    */
-  activateListeners(html) {
-    // allow navigation for non owned actors
-    if (!isV2) this._tabs.forEach((t) => t.bind(html[0]));
-    this._activateCprListeners(html);
-    if (!isV2) super.activateListeners(html);
+  async _onFirstRender(context, options) {
+    await super._onFirstRender(context, options);
+    this._createActorImageContextMenu(this.element);
   }
 
+  /**
+   * Activate the listeners common to every CPR actor sheet after each render. The rendered part
+   * is replaced on every render, so listeners bound to its content never accumulate.
+   *
+   * @override
+   */
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    this._activateCprListeners($(this.element));
+    this._bindItemDragHandlers();
+  }
+
+  /**
+   * ActorSheetV2 binds its DragDrop handler to ".draggable" elements before our listeners run, so
+   * item rows are made draggable here instead. Rows which opt out with draggable="false" and the
+   * ND character sheet (which manages its own drag handles) are left alone.
+   */
+  _bindItemDragHandlers() {
+    if (!this._canDragStart(".item")) return;
+    for (const row of this.element.querySelectorAll(".item[data-item-id]")) {
+      if (row.closest(".cpr-nd-root")) continue;
+      if (row.getAttribute("draggable") === "false") continue;
+      if (row.ondragstart) continue;
+      row.setAttribute("draggable", "true");
+      row.addEventListener("dragstart", (event) => {
+        // Rows can be nested (installed items); only the innermost row describes the drag.
+        event.stopPropagation();
+        this._onDragStart(event);
+      });
+    }
+  }
+
+  /**
+   * Items dragged off the sheet carry the extra data _cprOnItemDrop needs to transfer ownership.
+   *
+   * @override
+   */
+  _onDragStart(event) {
+    const row = event.currentTarget;
+    if (row instanceof HTMLElement && row.matches(".item[data-item-id]")) {
+      return this._onDragItemStart(event);
+    }
+    return super._onDragStart(event);
+  }
+
+  /**
+   * Listeners common across Mook, Container and Character sheets.
+   *
+   * @param {jQuery} html - the application element
+   */
   _activateCprListeners(html) {
     // Make a roll
     html.find(".rollable").click((event) => this._onRoll(event));
@@ -441,24 +481,11 @@ function CPRActorSheetMixin(Base, isV2 = false) {
       }
     );
 
-    // Item Dragging
-    html.find(".item").each((i, li) => {
-      if (isV2) {
-        li.classList.add("draggable");
-      } else {
-        li.setAttribute("draggable", true);
-        li.addEventListener("dragstart", (event) => this._onDragItemStart(event), false);
-      }
-    });
-
-    // Set up right click context menu when clicking on Actor's image
-    this._createActorImageContextMenu(html);
-
     if (!this.isEditable) return;
     // Listeners for editable fields under here. Fields might not be editable because
     // the user viewing the sheet might not have permission to. They may not be the owner.
 
-    $("input[type=text]").focusin(() => $(this).select());
+    html.find("input[type=text]").focusin((event) => event.currentTarget.select());
 
     // Render Item Card
     html.find(".item-edit").click((event) => this._renderItemCard(event));
@@ -516,7 +543,6 @@ function CPRActorSheetMixin(Base, isV2 = false) {
     } else {
       this.collapsedSections.push(event.currentTarget.id);
     }
-    if (!isV2) this.options.collapsedSections = this.collapsedSections;
   }
 
   /**
@@ -1488,11 +1514,9 @@ function CPRActorSheetMixin(Base, isV2 = false) {
    */
   async _onDropItem(event, item) {
     const result = await super._onDropItem(event, item);
-    if (isV2) {
-      // Sorting an Item the actor already owns resolves to that same Item; only a
-      // newly created Item counts as a completed transfer.
-      this._cprDroppedItem = result && result !== item ? result : null;
-    }
+    // Sorting an Item the actor already owns resolves to that same Item; only a
+    // newly created Item counts as a completed transfer.
+    this._cprDroppedItem = result && result !== item ? result : null;
     return result;
   }
 
@@ -1547,18 +1571,12 @@ function CPRActorSheetMixin(Base, isV2 = false) {
     const deleteList = transferItem ? [sourceItem._id] : [];
     const containerTypes = SystemUtils.getDocTypesFromMixin("container");
 
-    // AppV1 ActorSheet#_onDrop resolves to the created Items. ActorSheetV2#_onDrop
-    // resolves to nothing, so the created Item is captured in _onDropItem instead.
-    let newItem;
-    if (isV2) {
-      this._cprDroppedItem = null;
-      await super._onDrop(event);
-      newItem = this._cprDroppedItem;
-      this._cprDroppedItem = null;
-    } else {
-      const created = await super._onDrop(event);
-      newItem = Array.isArray(created) ? created[0] : null;
-    }
+    // ActorSheetV2#_onDrop resolves to nothing, so the created Item is captured in
+    // _onDropItem instead.
+    this._cprDroppedItem = null;
+    await super._onDrop(event);
+    const newItem = this._cprDroppedItem;
+    this._cprDroppedItem = null;
 
     // If we created a new item and the sourceItem is a container type the createItem hook ensures all of the
     // installed items are also created on the target actor. We need to ensure that those items are
@@ -1684,8 +1702,7 @@ function CPRActorSheetMixin(Base, isV2 = false) {
     const filterValue = event.currentTarget.value;
     const num = $(".filter-contents").val();
     this.cprContentFilter = filterValue;
-    if (isV2) await this.render({ force: true });
-    else await this._render();
+    await this.render({ force: true });
     $(".filter-contents").focus().val("").val(num);
   }
 
@@ -1702,8 +1719,7 @@ function CPRActorSheetMixin(Base, isV2 = false) {
       this.cprContentFilter !== ""
     ) {
       this.cprContentFilter = "";
-      if (isV2) this.render({ force: true });
-      else this._render();
+      this.render({ force: true });
     }
   }
 
@@ -1750,13 +1766,22 @@ function CPRActorSheetMixin(Base, isV2 = false) {
   };
 }
 
-export default class CPRActorSheet extends CPRActorSheetMixin(
-  foundry.appv1.sheets.ActorSheet
-) {}
-
+/**
+ * The AppV2 base for the mook, container and character sheets.
+ */
 export class CPRActorSheetV2 extends CPRActorSheetMixin(
-  HandlebarsApplicationMixin(ActorSheetV2),
-  true
+  HandlebarsApplicationMixin(ActorSheetV2)
 ) {
   static isAppV2 = true;
+
+  static DEFAULT_OPTIONS = {
+    classes: ["sheet", "actor"],
+    window: { resizable: true },
+    form: {
+      submitOnChange: true,
+      closeOnSubmit: false,
+    },
+  };
 }
+
+export default CPRActorSheetV2;

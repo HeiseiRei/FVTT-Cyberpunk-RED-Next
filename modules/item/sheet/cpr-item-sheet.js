@@ -8,62 +8,194 @@ import CPRDialog from "../../dialog/cpr-dialog-application.js";
 import RoleAbilitySchema from "../../datamodels/item/components/role-ability-schema.js";
 
 const TextEditor = foundry.applications.ux.TextEditor.implementation;
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ItemSheetV2 } = foundry.applications.sheets;
+
+// Elements whose scroll position is kept across re-renders of the sheet.
+const SCROLL_SELECTOR = [
+  ".item-bottom-content-section",
+  ".item-bottom-content-section .tab",
+  ".item-bottom-content-section .tab > div",
+  ".item-bottom-content-section .tab > div > div",
+  ".item-bottom-content-section .tab ol",
+].join(", ");
 
 /**
- * Extend the basic ActorSheet.
- * @extends {ItemSheet}
+ * The AppV2 sheet used by every CPR Item type.
+ * @extends {ItemSheetV2}
  */
 
-export default class CPRItemSheet extends foundry.appv1.sheets.ItemSheet {
-  /* -------------------------------------------- */
-  /** @override */
-  static get defaultOptions() {
+export default class CPRItemSheet extends HandlebarsApplicationMixin(
+  ItemSheetV2
+) {
+  static DEFAULT_OPTIONS = {
+    tag: "form",
+    classes: ["sheet", "item", "cpr-item-sheet-v2"],
+    position: { width: 715 },
+    window: { resizable: true },
+    form: {
+      submitOnChange: true,
+      closeOnSubmit: false,
+    },
+    actions: {
+      cprEditImage: CPRItemSheet.#onEditImage,
+    },
+  };
+
+  static PARTS = {
+    sheet: {
+      template: "systems/cyberpunk-red-core/templates/item/cpr-item-sheet.hbs",
+    },
+  };
+
+  /**
+   * The tab shown when the sheet is first opened.
+   * @type {string}
+   */
+  static INITIAL_TAB = "item-description";
+
+  /**
+   * World settings are not available when the class is defined, so the window height
+   * is resolved when the sheet is constructed.
+   *
+   * @override
+   */
+  _initializeApplicationOptions(options) {
+    const applicationOptions = super._initializeApplicationOptions(options);
     const resizeCPRSheets = game.settings.get(
       game.system.id,
       "resizeCPRSheets"
     );
-
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      height: resizeCPRSheets ? 400 : "auto",
-      resizable: true,
-      tabs: [
-        {
-          contentSelector: ".item-bottom-content-section",
-          initial: "item-description",
-          navSelector: ".navtabs-item",
-        },
-      ],
-      width: 715,
-    });
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  get template() {
-    return `systems/${game.system.id}/templates/item/cpr-item-sheet.hbs`;
-  }
-
-  get classes() {
-    return super.defaultOptions.classes.concat([
-      "sheet",
-      "item",
-      `${this.item.type}`,
-    ]);
+    if (options.position?.height === undefined) {
+      applicationOptions.position.height = resizeCPRSheets ? 400 : "auto";
+    }
+    return applicationOptions;
   }
 
   /** @override */
-  async getData() {
-    const foundryData = await super.getData();
+  get title() {
+    return this.item.name;
+  }
+
+  /**
+   * Callers open read-only item cards with `item.sheet.render(true, { editable: false })`.
+   * The choice is remembered until the sheet is closed, or until another render passes
+   * `editable` again.
+   *
+   * @override
+   */
+  get isEditable() {
+    return this._cprEditable !== false && super.isEditable;
+  }
+
+  /** @override */
+  _configureRenderOptions(options) {
+    super._configureRenderOptions(options);
+    if (typeof options.editable === "boolean") {
+      this._cprEditable = options.editable;
+    }
+  }
+
+  /** @override */
+  _onClose(options) {
+    super._onClose(options);
+    this._cprEditable = undefined;
+  }
+
+  /** @override */
+  async _preRender(context, options) {
+    if (this.element) {
+      this._cprScrollPositions = Array.from(
+        this.element.querySelectorAll(SCROLL_SELECTOR),
+        ({ scrollLeft, scrollTop }) => ({ scrollLeft, scrollTop })
+      );
+    }
+    await super._preRender(context, options);
+  }
+
+  /** @override */
+  async _onFirstRender(context, options) {
+    await super._onFirstRender(context, options);
+    // The frame outlives re-renders, so the context menu is only bound once.
+    this._createItemImageContextMenu(this.element);
+  }
+
+  /** @override */
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+
+    // The markup predates AppV2 tab groups, so tabs are driven by the Tabs helper.
+    // The active tab is remembered because every submitted change re-renders the sheet.
+    const tabs = new foundry.applications.ux.Tabs({
+      navSelector: ".navtabs-item",
+      contentSelector: ".item-bottom-content-section",
+      initial: this._cprActiveTab ?? this.constructor.INITIAL_TAB,
+      callback: (_event, _tabs, active) => {
+        this._cprActiveTab = active;
+      },
+    });
+    tabs.bind(this.element);
+
+    const scrollable = this.element.querySelectorAll(SCROLL_SELECTOR);
+    scrollable.forEach((section, index) => {
+      const position = this._cprScrollPositions?.[index];
+      if (!position) return;
+      section.scrollLeft = position.scrollLeft;
+      section.scrollTop = position.scrollTop;
+    });
+    this._cprScrollPositions = undefined;
+
+    if (!this.isEditable) this._toggleDisabled(true);
+    this._activateCprListeners($(this.element));
+  }
+
+  /**
+   * Pick a new image for the Item.
+   *
+   * @this {CPRItemSheet}
+   * @param {PointerEvent} _event
+   * @param {HTMLElement} target - the image that was clicked
+   */
+  static async #onEditImage(_event, target) {
+    if (!this.isEditable) return;
+    const attr = target.dataset.edit ?? "img";
+    const current = foundry.utils.getProperty(this.item._source, attr);
+    const picker = new foundry.applications.apps.FilePicker.implementation({
+      type: "image",
+      current,
+      callback: (path) => this.item.update({ [attr]: path }),
+    });
+    await picker.browse();
+  }
+
+  /** @override */
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
+    const { item } = this;
+    // The same keys the AppV1 ItemSheet#getData provided; the partials rely on them.
+    const foundryData = {
+      ...context,
+      cssClass: this.isEditable ? "editable" : "locked",
+      editable: this.isEditable,
+      document: item,
+      data: item.toObject(false),
+      item,
+      limited: item.limited,
+      options: this.options,
+      owner: item.isOwner,
+      title: this.title,
+    };
     const cprData = {};
     cprData.isGM = game.user.isGM;
-    const itemType = foundryData.item.type;
+    const itemType = item.type;
     const mixins = SystemUtils.getMixins(itemType);
     if (itemType === "role" || mixins.includes("attackable")) {
       // relativeSkills and relativeAmmo will be other items relevant to this one.
       // For owned objects, the item list will come from the character owner
       // For unowned objects, the item list will come from the core list of objects
-      if (foundryData.item.isOwned && this.object.actor.type !== "container") {
-        cprData.relativeSkills = this.object.actor.itemTypes.skill;
-        cprData.relativeAmmo = this.object.actor.itemTypes.ammo;
+      if (item.isOwned && item.actor.type !== "container") {
+        cprData.relativeSkills = item.actor.itemTypes.skill;
+        cprData.relativeAmmo = item.actor.itemTypes.ammo;
       } else {
         const coreSkills = await SystemUtils.GetCoreSkills();
         const worldSkills = game.items.filter((i) => i.type === "skill");
@@ -110,7 +242,7 @@ export default class CPRItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     // Enrich the description so that links to foundry documents in item descriptions have proper functionality.
     foundryData.enrichedHTMLDescription = await TextEditor.enrichHTML(
-      foundryData.item.system.description.value,
+      item.system.description.value,
       { async: true }
     );
     return { ...foundryData, ...cprData };
@@ -268,13 +400,14 @@ export default class CPRItemSheet extends foundry.appv1.sheets.ItemSheet {
   }
 
   /* -------------------------------------------- */
-  /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
-    if (!this.options.editable) return;
-
-    // Select all text when grabbing text input.
-    $("input[type=text]").focusin(() => $(this).select());
+  /**
+   * Bind the listeners of the sheet. Called after every render with the sheet's element
+   * wrapped in jQuery, as the listeners predate AppV2.
+   *
+   * @param {jQuery} html - the sheet's element
+   */
+  _activateCprListeners(html) {
+    if (!this.isEditable) return;
 
     // generic listeners
     html
@@ -362,9 +495,6 @@ export default class CPRItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     // Change things when the "usage" for active effects changes
     html.find(".set-usage").change((event) => this._setUsage(event));
-
-    // Set up right click context menu when clicking on Item's image
-    this._createItemImageContextMenu(html);
   }
 
   /*
@@ -439,8 +569,8 @@ export default class CPRItemSheet extends foundry.appv1.sheets.ItemSheet {
     const coreSkills = await SystemUtils.GetCoreSkills(); // Get core skills.
     const customSkills = game.items.filter((i) => i.type === "skill"); // Get any custom skills.
     // If object is owned, get all skills on actor. If not, get all skills in system.
-    const allSkills = this.object.isOwned
-      ? this.actor.itemTypes.skill
+    const allSkills = this.item.isOwned
+      ? this.item.actor.itemTypes.skill
       : coreSkills
           .concat(customSkills)
           .sort((a, b) => (a.name > b.name ? 1 : -1));
@@ -1129,8 +1259,8 @@ export default class CPRItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     const coreSkills = await SystemUtils.GetCoreSkills();
     const customSkills = game.items.filter((i) => i.type === "skill");
-    const allSkills = this.object.isOwned
-      ? this.actor.itemTypes.skill
+    const allSkills = this.item.isOwned
+      ? this.item.actor.itemTypes.skill
       : coreSkills
           .concat(customSkills)
           .sort((a, b) => (a.name > b.name ? 1 : -1));
@@ -1394,7 +1524,7 @@ export default class CPRItemSheet extends foundry.appv1.sheets.ItemSheet {
   _renderReadOnlyItemCard(event) {
     const itemId = SystemUtils.GetEventDatum(event, "data-item-id");
     let item = this.item.isEmbedded
-      ? this.actor.items.find((i) => i._id === itemId)
+      ? this.item.actor.items.find((i) => i._id === itemId)
       : game.items.get(itemId);
 
     // If this item is in a pack, its installed items don't actually exist,
@@ -1420,7 +1550,7 @@ export default class CPRItemSheet extends foundry.appv1.sheets.ItemSheet {
    * @returns {ContextMenu} The created ContextMenu
    */
   _createItemImageContextMenu(html) {
-    return createImageContextMenu(html, ".item-image-block", this.item);
+    return createImageContextMenu(html, ".item-image", this.item);
   }
 
   async _manageInstallableTypes() {

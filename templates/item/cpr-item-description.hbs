@@ -8,12 +8,15 @@
     {{/each}}
   </div>
   <div class="item-description-section">
-    {{editor enrichedHTMLDescription
-             target="system.description.value"
-             button=true
-             owner=owner
-             editable=editable
-             engine="prosemirror"
-    }}
+    {{#if editable}}
+      <prose-mirror name="system.description.value"
+                    value="{{item.system.description.value}}"
+                    document-uuid="{{item.uuid}}"
+                    toggled>{{{enrichedHTMLDescription}}}</prose-mirror>
+    {{else}}
+      <div class="editor prosemirror">
+        <div class="editor-content">{{{enrichedHTMLDescription}}}</div>
+      </div>
+    {{/if}}
   </div>
 </div>

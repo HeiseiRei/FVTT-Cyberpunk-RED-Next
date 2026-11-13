@@ -1,57 +1,55 @@
-<form>
-  <div class="cpr-chat-theme-settings">
-    <p>{{localize "CPR.settings.chatTheme.customSettings.hint"}}</p>
-    <fieldset>
-      <legend>{{localize "CPR.settings.chatTheme.customSettings.messageBackground"}}</legend>
-      <div class="cpr-chat-theme-font-field">
-        <label for="cpr-chat-theme-background-mode">{{localize "CPR.settings.chatTheme.backgroundMode.label"}}</label>
-        <select id="cpr-chat-theme-background-mode" name="backgroundMode">
-          {{selectOptions backgroundModeChoices selected=backgroundMode localize=true}}
-        </select>
+<div class="cpr-chat-theme-settings">
+  <p>{{localize "CPR.settings.chatTheme.customSettings.hint"}}</p>
+  <fieldset>
+    <legend>{{localize "CPR.settings.chatTheme.customSettings.messageBackground"}}</legend>
+    <div class="cpr-chat-theme-font-field">
+      <label for="cpr-chat-theme-background-mode">{{localize "CPR.settings.chatTheme.backgroundMode.label"}}</label>
+      <select id="cpr-chat-theme-background-mode" name="backgroundMode">
+        {{selectOptions backgroundModeChoices selected=backgroundMode localize=true}}
+      </select>
+    </div>
+    <div class="cpr-chat-theme-font-field">
+      <label for="cpr-chat-theme-background-opacity">{{localize "CPR.settings.chatTheme.backgroundOpacity"}}</label>
+      <input id="cpr-chat-theme-background-opacity" type="number" name="backgroundOpacity" min="0" max="100" step="1" value="{{backgroundOpacity}}"/>
+    </div>
+    <div class="cpr-chat-theme-font-field">
+      <label for="cpr-chat-theme-gradient-direction">{{localize "CPR.settings.chatTheme.gradientDirection.label"}}</label>
+      <select id="cpr-chat-theme-gradient-direction" name="gradientDirection">
+        {{selectOptions gradientDirectionChoices selected=gradientDirection localize=true}}
+      </select>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>{{localize "CPR.settings.chatTheme.customSettings.colors"}}</legend>
+    {{#each colors}}
+      <div class="cpr-chat-theme-color-field">
+        <label for="cpr-chat-theme-{{key}}">{{localize label}}</label>
+        <input id="cpr-chat-theme-{{key}}" type="color" name="{{key}}" value="{{value}}"/>
       </div>
-      <div class="cpr-chat-theme-font-field">
-        <label for="cpr-chat-theme-background-opacity">{{localize "CPR.settings.chatTheme.backgroundOpacity"}}</label>
-        <input id="cpr-chat-theme-background-opacity" type="number" name="backgroundOpacity" min="0" max="100" step="1" value="{{backgroundOpacity}}"/>
-      </div>
-      <div class="cpr-chat-theme-font-field">
-        <label for="cpr-chat-theme-gradient-direction">{{localize "CPR.settings.chatTheme.gradientDirection.label"}}</label>
-        <select id="cpr-chat-theme-gradient-direction" name="gradientDirection">
-          {{selectOptions gradientDirectionChoices selected=gradientDirection localize=true}}
-        </select>
-      </div>
-    </fieldset>
-    <fieldset>
-      <legend>{{localize "CPR.settings.chatTheme.customSettings.colors"}}</legend>
-      {{#each colors}}
-        <div class="cpr-chat-theme-color-field">
-          <label for="cpr-chat-theme-{{key}}">{{localize label}}</label>
-          <input id="cpr-chat-theme-{{key}}" type="color" name="{{key}}" value="{{value}}"/>
-        </div>
-      {{/each}}
-    </fieldset>
-    <fieldset>
-      <legend>{{localize "CPR.settings.chatTheme.customSettings.fonts"}}</legend>
-      <div class="cpr-chat-theme-font-field">
-        <label for="cpr-chat-theme-body-font">{{localize "CPR.settings.chatTheme.font.body"}}</label>
-        <select id="cpr-chat-theme-body-font" name="bodyFont">
-          {{selectOptions bodyFontChoices selected=bodyFont localize=true}}
-        </select>
-      </div>
-      <div class="cpr-chat-theme-font-field">
-        <label for="cpr-chat-theme-heading-font">{{localize "CPR.settings.chatTheme.font.heading"}}</label>
-        <select id="cpr-chat-theme-heading-font" name="headingFont">
-          {{selectOptions headingFontChoices selected=headingFont localize=true}}
-        </select>
-      </div>
-      <div class="cpr-chat-theme-font-field">
-        <label for="cpr-chat-theme-mono-font">{{localize "CPR.settings.chatTheme.font.mono"}}</label>
-        <select id="cpr-chat-theme-mono-font" name="monoFont">
-          {{selectOptions monoFontChoices selected=monoFont localize=true}}
-        </select>
-      </div>
-    </fieldset>
-    <button type="submit">
-      <i class="fas fa-floppy-disk"></i> {{localize "CPR.settings.saveSettings"}}
-    </button>
-  </div>
-</form>
+    {{/each}}
+  </fieldset>
+  <fieldset>
+    <legend>{{localize "CPR.settings.chatTheme.customSettings.fonts"}}</legend>
+    <div class="cpr-chat-theme-font-field">
+      <label for="cpr-chat-theme-body-font">{{localize "CPR.settings.chatTheme.font.body"}}</label>
+      <select id="cpr-chat-theme-body-font" name="bodyFont">
+        {{selectOptions bodyFontChoices selected=bodyFont localize=true}}
+      </select>
+    </div>
+    <div class="cpr-chat-theme-font-field">
+      <label for="cpr-chat-theme-heading-font">{{localize "CPR.settings.chatTheme.font.heading"}}</label>
+      <select id="cpr-chat-theme-heading-font" name="headingFont">
+        {{selectOptions headingFontChoices selected=headingFont localize=true}}
+      </select>
+    </div>
+    <div class="cpr-chat-theme-font-field">
+      <label for="cpr-chat-theme-mono-font">{{localize "CPR.settings.chatTheme.font.mono"}}</label>
+      <select id="cpr-chat-theme-mono-font" name="monoFont">
+        {{selectOptions monoFontChoices selected=monoFont localize=true}}
+      </select>
+    </div>
+  </fieldset>
+  <button type="submit">
+    <i class="fas fa-floppy-disk"></i> {{localize "CPR.settings.saveSettings"}}
+  </button>
+</div>
