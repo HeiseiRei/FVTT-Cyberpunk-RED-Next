@@ -40,6 +40,24 @@
                    data-tooltip="{{localize "CPR.chat.attackTargets.evadeHint"}}">
                   <i class="fas fa-person-running"></i> {{localize "CPR.chat.attackTargets.evade"}}
                 </a>
+                {{#unless (cprCompare target.hit "===" false)}}
+                  <a class="clickable cpr-attack-target-decline"
+                     data-action="declineEvasion"
+                     data-actor-id="{{target.actorId}}"
+                     data-token-id="{{target.tokenId}}"
+                     data-scene-id="{{target.sceneId}}"
+                     data-margin="{{target.margin}}"
+                     data-attacker-name="{{../attackerName}}"
+                     data-attacker-actor-id="{{../attack.actorId}}"
+                     data-attacker-token-id="{{../attack.tokenId}}"
+                     data-attacker-scene-id="{{../attack.sceneId}}"
+                     data-attack-item-id="{{../attack.itemId}}"
+                     data-attack-type="{{../attack.type}}"
+                     data-attack-location="{{../attack.location}}"
+                     data-tooltip="{{localize "CPR.chat.attackTargets.declineHint"}}">
+                    <i class="fas fa-shield-halved"></i> {{localize "CPR.chat.attackTargets.decline"}}
+                  </a>
+                {{/unless}}
               {{/unless}}
             {{/if}}
             {{#unless target.outOfRange }}

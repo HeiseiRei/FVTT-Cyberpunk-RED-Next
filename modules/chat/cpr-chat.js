@@ -395,6 +395,11 @@ export default class CPRChat {
           break;
         }
 
+        case "declineEvasion": {
+          await this.declineEvasion(event, clickable);
+          break;
+        }
+
         case "reverseDamage": {
           const actorId = getEventDatum("data-actor-id");
           const tokenId = getEventDatum("data-token-id");
@@ -576,6 +581,61 @@ export default class CPRChat {
       attackType: getEventDatum("data-attack-type"),
       location: getEventDatum("data-attack-location") ?? "body",
     };
+  }
+
+  /**
+   * The defender chooses not to dodge an attack they could have dodged, from the
+   * button on the attack roll card. That settles the attack as a hit, so its damage
+   * is rolled and applied when automatic damage is enabled. Only someone who owns
+   * the defender may decide this.
+   *
+   * @param {Event} event - the click
+   * @param {HTMLElement} clickable - the button that was clicked
+   */
+  static async declineEvasion(event, clickable) {
+    const getEventDatum = (datum) =>
+      SystemUtils.GetEventDatum(event, datum, clickable);
+    const target = {
+      actorId: getEventDatum("data-actor-id"),
+      tokenId: getEventDatum("data-token-id"),
+      sceneId: getEventDatum("data-scene-id") ?? "",
+      margin: Number.parseInt(getEventDatum("data-margin"), 10) || 1,
+    };
+    const defender = CPRAutoDamage.findActor(target);
+    if (!defender) {
+      SystemUtils.DisplayMessage(
+        "warn",
+        SystemUtils.Localize("CPR.chat.attackTargets.targetMissing")
+      );
+      return;
+    }
+    if (!defender.isOwner) {
+      SystemUtils.DisplayMessage(
+        "warn",
+        SystemUtils.Localize("CPR.chat.attackTargets.notYourToken")
+      );
+      return;
+    }
+
+    const token = game.scenes.get(target.sceneId)?.tokens.get(target.tokenId);
+    await ChatMessage.create({
+      content: `<p>${foundry.utils.escapeHTML(
+        SystemUtils.Format("CPR.chat.attackTargets.declined", {
+          name: token?.name ?? defender.name,
+          attacker: getEventDatum("data-attacker-name") ?? "",
+        })
+      )}</p>`,
+      speaker: ChatMessage.getSpeaker({ actor: defender, token }),
+    });
+
+    if (!CPRAutoDamage.enabled) return;
+    const attack = this.#readAttack(getEventDatum);
+    if (!attack) return;
+    try {
+      await CPRAutoDamage.rollAndApply(attack, [target]);
+    } catch (err) {
+      LOGGER.error("Could not apply damage after Evasion was declined.", err);
+    }
   }
 
   /**

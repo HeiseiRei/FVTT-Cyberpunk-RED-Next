@@ -129,6 +129,8 @@ export default class CPRAutoDamage {
         ignoreArmorPercent: Number(extra.ignoreArmorPercent) || 0,
         ignoreBelowSP: Number(extra.ignoreBelowSP) || 0,
         lethal: extra.ammoType !== "rubber",
+        // Two or more sixes: a Critical Injury if any of the damage gets through.
+        critical: cprRoll.wasCritical(),
         context: cprRoll.damageContext ?? {},
       };
       for (const target of group) {
@@ -181,6 +183,7 @@ export default class CPRAutoDamage {
     const location = ["head", "brain"].includes(damage?.location)
       ? damage.location
       : "body";
+    const hpBefore = Number(actor.system?.derivedStats?.hp?.value);
     // eslint-disable-next-line no-underscore-dangle
     await actor._applyDamage(
       Number(damage?.total) || 0,
@@ -194,6 +197,45 @@ export default class CPRAutoDamage {
       { ...DEFAULT_DAMAGE_OPTIONS },
       damage?.context ?? {}
     );
+
+    const hpAfter = Number(actor.system?.derivedStats?.hp?.value);
+    if (damage?.critical && hpAfter < hpBefore) {
+      await this.#rollCriticalInjury(actor, location);
+    }
+  }
+
+  /**
+   * Roll a Critical Injury for an actor that took damage from a critical damage roll.
+   * The table is picked by hit location from the configured Critical Injury compendium;
+   * a compendium without a matching table is left for the GM to roll by hand.
+   *
+   * @param {CPRActor} actor - who was injured
+   * @param {String} location - "head" or "body"
+   */
+  static async #rollCriticalInjury(actor, location) {
+    if (!["character", "mook"].includes(actor.type)) return;
+    if (!["head", "body"].includes(location)) return;
+    try {
+      const compendium = game.settings.get(
+        game.system.id,
+        "criticalInjuryRollTableCompendium"
+      );
+      const tables = await SystemUtils.GetCompendiumDocs(compendium);
+      const table = tables.find((candidate) =>
+        String(SystemUtils.GetOriginalName(candidate) ?? "")
+          .toLowerCase()
+          .includes(location)
+      );
+      if (!table) {
+        LOGGER.warn(`No Critical Injury table found for the ${location}.`);
+        return;
+      }
+      // The sheet owns the Critical Injury logic (duplicate handling, chat card).
+      // eslint-disable-next-line no-underscore-dangle
+      await actor.sheet._drawCriticalInjuryTable(table, 0);
+    } catch (err) {
+      LOGGER.error("Could not roll a Critical Injury automatically.", err);
+    }
   }
 
   /**
