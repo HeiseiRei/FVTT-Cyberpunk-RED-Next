@@ -420,6 +420,14 @@
   --cpr-combat-muted: var(--cpr-chat-text-muted);
 }
 
+/* Dialogs use the secondary accent for text and outlines. Some chat themes pick a
+   secondary accent that sits close to their background (Classic Light, Classic Dark,
+   Arasaka), so blend it toward the text color to keep it readable in every theme. */
+.cpr-nd-dialog {
+  --cpr-combat-cyan: color-mix(in srgb, var(--cpr-chat-accent-alt) 45%, var(--cpr-chat-text-primary));
+  --cpr-combat-blue: var(--cpr-combat-cyan);
+}
+
 .chat-log .chat-message:has(.cpr-combat-card) {
   background: var(--cpr-chat-message-background) !important;
   border-color: var(--cpr-chat-border) !important;
@@ -832,11 +840,11 @@
 }
 
 .cpr-nd-dialog .ledger-info > div:first-child {
-  color: var(--cpr-combat-cyan);
+  color: var(--cpr-combat-amber);
 }
 
 .cpr-nd-dialog .ledger-info > div:last-child {
-  color: var(--cpr-combat-cyan);
+  color: var(--cpr-combat-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -875,9 +883,9 @@
 
 .cpr-nd-dialog .ledger-edit-actions a {
   align-items: center;
-  border: 1px solid var(--cpr-combat-cyan);
+  border: 1px solid var(--cpr-combat-amber);
   border-radius: 0.2rem;
-  color: var(--cpr-combat-cyan);
+  color: var(--cpr-combat-amber);
   display: inline-flex;
   justify-content: center;
   min-height: 1.8rem;
