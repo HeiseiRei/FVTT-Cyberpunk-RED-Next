@@ -10,8 +10,7 @@ const PersistSectionViews = () => {
    * @param {CPRActorSheet} actorSheet - application object (the sheet)
    */
   const persistSectionViews = (actorSheet) => {
-    const collapsedSections =
-      actorSheet.collapsedSections ?? actorSheet.options.collapsedSections;
+    const { collapsedSections } = actorSheet;
     if (!collapsedSections) return;
     SystemUtils.SetUserSetting(
       "sheetConfig",
@@ -19,11 +18,8 @@ const PersistSectionViews = () => {
       collapsedSections,
       actorSheet.id
     );
-    if (!Object.isFrozen(actorSheet.options)) {
-      actorSheet.options.setConfig = true;
-    }
   };
-  Hooks.on("closeActorSheet", persistSectionViews);
+  // Every CPR Actor Sheet is an AppV2 application.
   Hooks.on("closeApplicationV2", persistSectionViews);
 };
 

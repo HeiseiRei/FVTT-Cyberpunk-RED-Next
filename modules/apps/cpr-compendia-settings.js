@@ -1,29 +1,47 @@
 import CPR from "../system/config.js";
 import SystemUtils from "../utils/cpr-systemUtils.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 /**
  * Defines behaviors for a window that pops up when the Config Compendia button in
  * system settings is clicked. We go this route because the options available are
  * based on content in game.packs, but game.packs is not defined when settings are
  * configured. So we have present options dynamically when a button is clicked.
  */
-export default class CPRCompendiaSettings extends FormApplication {
+export default class CPRCompendiaSettings extends HandlebarsApplicationMixin(
+  ApplicationV2
+) {
   /**
-   * set up default things like the html template and window size
+   * set up default things like the window size and how the form is submitted
    *
    * @override
    * @static
    */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      title: SystemUtils.Localize("CPR.settings.compendiumMenu.title"),
-      id: "compendia-config",
-      template: `systems/${game.system.id}/templates/apps/compendia-settings.hbs`,
+  static DEFAULT_OPTIONS = {
+    id: "compendia-config",
+    tag: "form",
+    window: {
+      title: "CPR.settings.compendiumMenu.title",
+    },
+    position: {
       width: "auto",
       height: "auto",
+    },
+    form: {
+      handler: CPRCompendiaSettings.#onSubmit,
+      submitOnChange: false,
       closeOnSubmit: true,
-    });
-  }
+    },
+  };
+
+  /** @override */
+  static PARTS = {
+    form: {
+      template:
+        "systems/cyberpunk-red-core/templates/apps/compendia-settings.hbs",
+    },
+  };
 
   /**
    * When this application (read: form window) is launched, create the data object that is
@@ -36,7 +54,8 @@ export default class CPRCompendiaSettings extends FormApplication {
    * @returns {Object}
    */
   // eslint-disable-next-line class-methods-use-this
-  async getData() {
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
     const critCurr = await game.settings.get(
       game.system.id,
       "criticalInjuryRollTableCompendium"
@@ -67,6 +86,7 @@ export default class CPRCompendiaSettings extends FormApplication {
       choicesDv[`world.${comp.metadata.name}`] = comp.metadata.label;
     }
     return {
+      ...context,
       choicesCrit,
       choicesNet,
       choicesDv,
@@ -81,26 +101,27 @@ export default class CPRCompendiaSettings extends FormApplication {
    * internal settings with what the user chose.
    *
    * @async
-   * @override
-   * @param {*} event (not used here)
-   * @param {Object} formData - choices made with the dropdowns in the sub menus
+   * @this {CPRCompendiaSettings}
+   * @param {SubmitEvent} event (not used here)
+   * @param {HTMLFormElement} form (not used here)
+   * @param {FormDataExtended} formData - choices made with the dropdowns in the sub menus
    */
-  // eslint-disable-next-line class-methods-use-this
-  async _updateObject(event, formData) {
+  static async #onSubmit(event, form, formData) {
+    const data = formData.object;
     await game.settings.set(
       game.system.id,
       "criticalInjuryRollTableCompendium",
-      formData.injuryChoice
+      data.injuryChoice
     );
     await game.settings.set(
       game.system.id,
       "netArchRollTableCompendium",
-      formData.netArchChoice
+      data.netArchChoice
     );
     await game.settings.set(
       game.system.id,
       "dvRollTableCompendium",
-      formData.dvChoice
+      data.dvChoice
     );
     SystemUtils.DisplayMessage(
       "notify",

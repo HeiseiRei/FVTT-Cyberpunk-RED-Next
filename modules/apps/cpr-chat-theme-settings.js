@@ -54,19 +54,37 @@ const GRADIENT_DIRECTIONS = {
   "315deg": "CPR.settings.chatTheme.gradientDirection.northWest",
 };
 
-export default class CPRChatThemeSettings extends FormApplication {
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      title: SystemUtils.Localize("CPR.settings.chatTheme.customSettings.title"),
-      id: "cpr-chat-theme-settings",
-      template: `systems/${game.system.id}/templates/apps/cpr-chat-theme-settings.hbs`,
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+export default class CPRChatThemeSettings extends HandlebarsApplicationMixin(
+  ApplicationV2
+) {
+  static DEFAULT_OPTIONS = {
+    id: "cpr-chat-theme-settings",
+    tag: "form",
+    window: {
+      title: "CPR.settings.chatTheme.customSettings.title",
+    },
+    position: {
       width: 520,
       height: "auto",
+    },
+    form: {
+      handler: CPRChatThemeSettings.#onSubmit,
+      submitOnChange: false,
       closeOnSubmit: true,
-    });
-  }
+    },
+  };
 
-  async getData() {
+  static PARTS = {
+    form: {
+      template:
+        "systems/cyberpunk-red-core/templates/apps/cpr-chat-theme-settings.hbs",
+    },
+  };
+
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
     const settings = foundry.utils.mergeObject(
       CHAT_THEME_CUSTOM_DEFAULTS,
       game.settings.get(game.system.id, "chatThemeCustom"),
@@ -79,6 +97,7 @@ export default class CPRChatThemeSettings extends FormApplication {
     }));
 
     return {
+      ...context,
       colors,
       bodyFontChoices: FONT_FIELDS.bodyFont,
       bodyFont: settings.bodyFont,
@@ -94,7 +113,17 @@ export default class CPRChatThemeSettings extends FormApplication {
     };
   }
 
-  async _updateObject(event, formData) {
+  /**
+   * Validate and save the custom chat theme. Throwing here blocks the window from closing,
+   * exactly as the invalid values did before.
+   *
+   * @this {CPRChatThemeSettings}
+   * @param {SubmitEvent} event (not used here)
+   * @param {HTMLFormElement} form (not used here)
+   * @param {FormDataExtended} formDataExtended - the submitted theme values
+   */
+  static async #onSubmit(event, form, formDataExtended) {
+    const formData = formDataExtended.object;
     const customTheme = {};
     for (const key of COLOR_FIELDS) {
       const value = formData[key];

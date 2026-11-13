@@ -600,7 +600,6 @@ export class CPRCharacterActorSheetV2 extends CPRCharacterActorSheetMixin(
   CPRActorSheetV2
 ) {
     static DEFAULT_OPTIONS = {
-      ...foundry.applications.sheets.ActorSheetV2.DEFAULT_OPTIONS,
       classes: ["sheet", "actor", "cpr-character-sheet-v2"],
       position: { width: 1050, height: 850 },
       window: { icon: "fa-solid fa-id-card", resizable: true },
@@ -627,10 +626,6 @@ export class CPRCharacterActorSheetV2 extends CPRCharacterActorSheetMixin(
         initial: "fight",
       },
     };
-
-    get token() {
-      return this.options.token ?? this.document.token ?? null;
-    }
 
     async _preRender(context, options) {
       if (this.element) {
@@ -660,11 +655,7 @@ export class CPRCharacterActorSheetV2 extends CPRCharacterActorSheetMixin(
         section.scrollTop = position.scrollTop;
       });
       this._cprScrollPositions = undefined;
-      this._activateCprListeners($(this.element));
+      // The common CPR listeners are activated by CPRActorSheetV2#_onRender.
       this._activateCharacterListeners(this.element);
-    }
-
-    _onDragStart(event) {
-      this._onDragItemStart(event);
     }
   }

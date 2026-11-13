@@ -5,13 +5,16 @@
         {{localize "CPR.characterSheet.bottomPane.lifepath.playerNotes"}}
       </div>
       <div class="note-pad">
-        {{editor enrichedHTML.systemInformationNotes
-            target="system.information.notes"
-            button=true
-            owner=owner
-            editable=editable
-            engine="prosemirror"
-        }}
+        {{#if editable}}
+          <prose-mirror name="system.information.notes"
+                        value="{{actor.system.information.notes}}"
+                        document-uuid="{{actor.uuid}}"
+                        toggled>{{{enrichedHTML.systemInformationNotes}}}</prose-mirror>
+        {{else}}
+          <div class="editor prosemirror">
+            <div class="editor-content">{{{enrichedHTML.systemInformationNotes}}}</div>
+          </div>
+        {{/if}}
       </div>
     </div>
   </div>
