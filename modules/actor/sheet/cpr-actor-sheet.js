@@ -9,6 +9,7 @@ import CPRMod from "../../rolls/cpr-modifiers.js";
 import CPRDialog from "../../dialog/cpr-dialog-application.js";
 import { ContainerUtils } from "../../item/mixins/cpr-container.js";
 import CPRTargeting from "../../combat/cpr-targeting.js";
+import CPRAutoDamage from "../../combat/cpr-auto-damage.js";
 
 const TextEditor = foundry.applications.ux.TextEditor.implementation;
 const ActorSheetV2 = foundry.applications.sheets.ActorSheetV2;
@@ -762,6 +763,14 @@ function CPRActorSheetMixin(Base) {
       !(cprRoll instanceof CPRRolls.CPRSuppressiveFireRoll)
     ) {
       cprRoll.attackerName = this.actor.name;
+      cprRoll.attack = {
+        actorId: this.actor.id,
+        tokenId: token ?? "",
+        sceneId: this.token?.parent?.id ?? canvas?.scene?.id ?? "",
+        itemId: item.id,
+        type: CPRAutoDamage.attackTypeOf(cprRoll),
+        location: cprRoll.location ?? "body",
+      };
       try {
         cprRoll.targetResults = await CPRTargeting.evaluateAttack(
           cprRoll,
@@ -775,7 +784,31 @@ function CPRActorSheetMixin(Base) {
         cprRoll.targetResults = [];
       }
     }
-    CPRChat.RenderRollCard(cprRoll);
+    await CPRChat.RenderRollCard(cprRoll);
+
+    // A hit the defender cannot dodge is settled, so its damage is rolled and applied
+    // straight away. Targets that may still roll Evasion are handled when they do.
+    if (cprRoll.attack && CPRAutoDamage.enabled) {
+      const certainHits = (cprRoll.targetResults ?? []).filter(
+        (target) => target.hit === true && !target.canEvade
+      );
+      if (certainHits.length > 0) {
+        try {
+          await CPRAutoDamage.rollAndApply(
+            {
+              actor: this.actor,
+              tokenId: token,
+              item,
+              attackType: cprRoll.attack.type,
+              location: cprRoll.attack.location,
+            },
+            certainHits
+          );
+        } catch (err) {
+          LOGGER.error("Could not apply damage automatically.", err);
+        }
+      }
+    }
 
     // save the location so subsequent damage rolls hit/show the same place
     if (cprRoll instanceof CPRRolls.CPRAimedAttackRoll) {

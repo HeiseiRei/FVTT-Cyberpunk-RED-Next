@@ -190,6 +190,19 @@ const registerSystemSettings = () => {
     },
   });
 
+  // Roll and apply damage as soon as an attack against a targeted token is settled
+  game.settings.register(game.system.id, "autoApplyDamage", {
+    name: "CPR.settings.autoApplyDamage.name",
+    hint: "CPR.settings.autoApplyDamage.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: (value) => {
+      LOGGER.log(`Changed autoApplyDamage to ${value}`);
+    },
+  });
+
   // Show a confirmation prompt before deleting an item from a sheet
   game.settings.register(game.system.id, "deleteItemConfirmation", {
     name: "CPR.settings.deleteConfirmation.name",

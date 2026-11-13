@@ -3,6 +3,7 @@ import { CPRRoll, CPRDamageRoll, CPRInitiative } from "../rolls/cpr-rolls.js";
 import SystemUtils from "../utils/cpr-systemUtils.js";
 import CPRDialog from "../dialog/cpr-dialog-application.js";
 import CPRTargeting from "../combat/cpr-targeting.js";
+import CPRAutoDamage from "../combat/cpr-auto-damage.js";
 
 /**
  * For the sake of aesthetics, we have a class for Chat cards. It wraps around
@@ -389,6 +390,11 @@ export default class CPRChat {
           break;
         }
 
+        case "autoDamage": {
+          await this.rollTargetDamage(event, clickable);
+          break;
+        }
+
         case "reverseDamage": {
           const actorId = getEventDatum("data-actor-id");
           const tokenId = getEventDatum("data-token-id");
@@ -522,6 +528,83 @@ export default class CPRChat {
     cprRoll.entityData = { actor: actor.id, token: tokenId || null };
     if (skill) cprRoll.entityData.item = skill.id;
     await this.RenderRollCard(cprRoll);
+
+    // A failed Evasion settles the attack, so its damage is rolled and applied now.
+    if (cprRoll.defense.evaded || !CPRAutoDamage.enabled) return;
+    const attack = this.#readAttack(getEventDatum);
+    if (!attack) return;
+    try {
+      await CPRAutoDamage.rollAndApply(attack, [
+        {
+          actorId,
+          tokenId,
+          sceneId: getEventDatum("data-scene-id") ?? "",
+          // Autofire damage scales with how far the attack beat the Evasion roll.
+          margin: Math.max(1, attackTotal - Number(cprRoll.resultTotal)),
+        },
+      ]);
+    } catch (err) {
+      LOGGER.error("Could not apply damage after the Evasion roll.", err);
+    }
+  }
+
+  /**
+   * Read the attack an attack card button belongs to: who attacked, with what and how.
+   *
+   * @param {Function} getEventDatum - reads a data attribute off the clicked button
+   * @returns {Object|null} - null when the attacker or the weapon no longer exists
+   */
+  static #readAttack(getEventDatum) {
+    const tokenId = getEventDatum("data-attacker-token-id") || null;
+    const actor = CPRAutoDamage.findActor({
+      actorId: getEventDatum("data-attacker-actor-id"),
+      tokenId,
+      sceneId: getEventDatum("data-attacker-scene-id"),
+    });
+    const item = actor?.items.get(getEventDatum("data-attack-item-id"));
+    if (!actor || !item) {
+      SystemUtils.DisplayMessage(
+        "warn",
+        SystemUtils.Localize("CPR.chat.attackTargets.attackerMissing")
+      );
+      return null;
+    }
+    return {
+      actor,
+      tokenId,
+      item,
+      attackType: getEventDatum("data-attack-type"),
+      location: getEventDatum("data-attack-location") ?? "body",
+    };
+  }
+
+  /**
+   * Roll the attack's damage and apply it to one target, from the damage button next
+   * to that target on the attack roll card. Only the attacker's owner may use it.
+   *
+   * @param {Event} event - the click
+   * @param {HTMLElement} clickable - the damage button that was clicked
+   */
+  static async rollTargetDamage(event, clickable) {
+    const getEventDatum = (datum) =>
+      SystemUtils.GetEventDatum(event, datum, clickable);
+    const attack = this.#readAttack(getEventDatum);
+    if (!attack) return;
+    if (!attack.actor.isOwner) {
+      SystemUtils.DisplayMessage(
+        "warn",
+        SystemUtils.Localize("CPR.chat.attackTargets.notYourAttack")
+      );
+      return;
+    }
+    await CPRAutoDamage.rollAndApply(attack, [
+      {
+        actorId: getEventDatum("data-actor-id"),
+        tokenId: getEventDatum("data-token-id"),
+        sceneId: getEventDatum("data-scene-id") ?? "",
+        margin: Number.parseInt(getEventDatum("data-margin"), 10) || 1,
+      },
+    ]);
   }
 
   static async damageApplication(event, clickable) {
