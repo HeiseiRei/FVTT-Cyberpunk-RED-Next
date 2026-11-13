@@ -8,6 +8,7 @@ import createImageContextMenu from "../../utils/cpr-imageContextMenu.js";
 import CPRMod from "../../rolls/cpr-modifiers.js";
 import CPRDialog from "../../dialog/cpr-dialog-application.js";
 import { ContainerUtils } from "../../item/mixins/cpr-container.js";
+import CPRTargeting from "../../combat/cpr-targeting.js";
 
 const TextEditor = foundry.applications.ux.TextEditor.implementation;
 const ActorSheetV2 = foundry.applications.sheets.ActorSheetV2;
@@ -750,6 +751,29 @@ function CPRActorSheetMixin(Base) {
     };
     if (item) {
       cprRoll.entityData.item = item.id;
+    }
+
+    // Resolve weapon attacks against the targeted tokens so the card can show who was
+    // hit and offer Evasion. Suppressive Fire is resolved by its own Concentration
+    // checks, so it is left out. A targeting problem must never block the roll itself.
+    if (
+      item &&
+      cprRoll instanceof CPRRolls.CPRAttackRoll &&
+      !(cprRoll instanceof CPRRolls.CPRSuppressiveFireRoll)
+    ) {
+      cprRoll.attackerName = this.actor.name;
+      try {
+        cprRoll.targetResults = await CPRTargeting.evaluateAttack(
+          cprRoll,
+          this.actor,
+          item,
+          targetedTokens,
+          this.token
+        );
+      } catch (err) {
+        LOGGER.error("Could not resolve the attack against its targets.", err);
+        cprRoll.targetResults = [];
+      }
     }
     CPRChat.RenderRollCard(cprRoll);
 

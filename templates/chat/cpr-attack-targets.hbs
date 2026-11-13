@@ -1,0 +1,43 @@
+{{#if targetResults.length }}
+  <div class="rollcard-bottom cpr-attack-targets">
+    <div class="cpr-block">
+      {{#each targetResults as |target| }}
+        <div class="cpr-attack-target{{#if (cprCompare target.hit "===" true)}} is-hit{{/if}}{{#if (cprCompare target.hit "===" false)}} is-miss{{/if}}">
+          <div class="cpr-attack-target-main">
+            <span class="cpr-attack-target-name text-semi">{{target.name}}</span>
+            <span class="cpr-attack-target-meta text-small">
+              {{#if (cprCompare target.distance "!==" null)}}{{target.distance}} {{target.units}}{{/if}}
+              {{#if (cprCompare target.dv "!==" null)}} · {{localize "CPR.chat.attackTargets.dv" dv=target.dv}}{{/if}}
+            </span>
+          </div>
+          <div class="cpr-attack-target-result">
+            {{#if target.outOfRange }}
+              <span class="cpr-attack-target-badge">{{localize "CPR.chat.attackTargets.outOfRange"}}</span>
+            {{else if (cprCompare target.hit "===" true)}}
+              <span class="cpr-attack-target-badge">{{localize "CPR.chat.attackTargets.hit"}}</span>
+            {{else if (cprCompare target.hit "===" false)}}
+              <span class="cpr-attack-target-badge">{{localize "CPR.chat.attackTargets.miss"}}</span>
+            {{else if target.isRanged }}
+              <span class="cpr-attack-target-badge">{{localize "CPR.chat.attackTargets.noDv"}}</span>
+            {{else}}
+              <span class="cpr-attack-target-badge">{{localize "CPR.chat.attackTargets.needsEvasion"}}</span>
+            {{/if}}
+            {{#if target.canEvade }}
+              {{#unless target.outOfRange }}
+                <a class="clickable cpr-attack-target-evade"
+                   data-action="rollEvasion"
+                   data-actor-id="{{target.actorId}}"
+                   data-token-id="{{target.tokenId}}"
+                   data-attack-total="{{../resultTotal}}"
+                   data-attacker-name="{{../attackerName}}"
+                   data-tooltip="{{localize "CPR.chat.attackTargets.evadeHint"}}">
+                  <i class="fas fa-person-running"></i> {{localize "CPR.chat.attackTargets.evade"}}
+                </a>
+              {{/unless}}
+            {{/if}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  </div>
+{{/if}}

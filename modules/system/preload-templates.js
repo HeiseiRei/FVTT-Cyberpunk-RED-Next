@@ -97,6 +97,7 @@ export default function preloadHandlebarsTemplates() {
     `systems/${game.system.id}/templates/chat/cpr-damage-application-card.hbs`,
     `systems/${game.system.id}/templates/chat/cpr-damage-rollcard.hbs`,
     `systems/${game.system.id}/templates/chat/cpr-rollcard-modifiers.hbs`,
+    `systems/${game.system.id}/templates/chat/cpr-attack-targets.hbs`,
 
     // Dialog: Partials
     `systems/${game.system.id}/templates/dialog/cpr-default-prompt.hbs`,

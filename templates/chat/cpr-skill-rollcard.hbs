@@ -7,6 +7,14 @@
       <div class="text-center text-small">
         {{localize "CPR.global.itemTypes.skill"}}
       </div>
+      {{#if defense }}
+        <div class="cpr-defense-result{{#if defense.evaded}} is-evaded{{else}} is-hit{{/if}}">
+          <span class="text-small">{{localize "CPR.chat.attackTargets.versus" name=defense.attackerName total=defense.attackTotal}}</span>
+          <span class="cpr-attack-target-badge">
+            {{#if defense.evaded}}{{localize "CPR.chat.attackTargets.evaded"}}{{else}}{{localize "CPR.chat.attackTargets.notEvaded"}}{{/if}}
+          </span>
+        </div>
+      {{/if}}
     </div>
   </div>
   <div class="rollcard-bottom">
