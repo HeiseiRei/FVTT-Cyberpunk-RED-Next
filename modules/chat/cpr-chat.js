@@ -2,6 +2,7 @@ import LOGGER from "../utils/cpr-logger.js";
 import { CPRRoll, CPRDamageRoll, CPRInitiative } from "../rolls/cpr-rolls.js";
 import SystemUtils from "../utils/cpr-systemUtils.js";
 import CPRDialog from "../dialog/cpr-dialog-application.js";
+import CPRTargeting from "../combat/cpr-targeting.js";
 
 /**
  * For the sake of aesthetics, we have a class for Chat cards. It wraps around
@@ -383,6 +384,11 @@ export default class CPRChat {
           break;
         }
 
+        case "rollEvasion": {
+          await this.rollEvasion(event, clickable);
+          break;
+        }
+
         case "reverseDamage": {
           const actorId = getEventDatum("data-actor-id");
           const tokenId = getEventDatum("data-token-id");
@@ -454,6 +460,70 @@ export default class CPRChat {
    *
    * @param {*} event - event data from the chat message
    */
+  /**
+   * Roll Evasion for a token targeted by an attack, from the button on the attack
+   * roll card. Only someone who owns the defender may roll for it. The result is
+   * posted as a skill roll card that states whether the attack was dodged.
+   *
+   * @param {Event} event - the click
+   * @param {HTMLElement} clickable - the Evasion button that was clicked
+   */
+  static async rollEvasion(event, clickable) {
+    const getEventDatum = (datum) =>
+      SystemUtils.GetEventDatum(event, datum, clickable);
+    const actorId = getEventDatum("data-actor-id");
+    const tokenId = getEventDatum("data-token-id");
+    const attackTotal = Number.parseInt(getEventDatum("data-attack-total"), 10);
+    const attackerName = getEventDatum("data-attacker-name") ?? "";
+
+    const actor = Object.keys(game.actors.tokens).includes(tokenId)
+      ? game.actors.tokens[tokenId]
+      : game.actors.find((a) => a.id === actorId);
+    if (!actor) {
+      SystemUtils.DisplayMessage(
+        "warn",
+        SystemUtils.Localize("CPR.chat.attackTargets.targetMissing")
+      );
+      return;
+    }
+    if (!actor.isOwner) {
+      SystemUtils.DisplayMessage(
+        "warn",
+        SystemUtils.Localize("CPR.chat.attackTargets.notYourToken")
+      );
+      return;
+    }
+    if (!Number.isFinite(attackTotal)) return;
+
+    // Roll the Evasion skill; an actor without that skill item rolls plain DEX.
+    const skill = CPRTargeting.getEvasionSkill(actor);
+    let cprRoll = skill
+      ? skill.createRoll("skill", actor)
+      : actor.createRoll("stat", "dex");
+
+    const keepRolling = await cprRoll.handleRollDialog(event, actor, skill ?? null);
+    if (!keepRolling) return;
+    if (skill) cprRoll = await skill.confirmRoll(cprRoll);
+    await cprRoll.roll();
+
+    // "Consume" LUCK if used
+    if (Number.isInteger(cprRoll.luck) && cprRoll.luck > 0) {
+      const luckStat = actor.system.stats.luck.value;
+      await actor.update({
+        "system.stats.luck.value": Math.max(0, luckStat - cprRoll.luck),
+      });
+    }
+
+    cprRoll.defense = CPRTargeting.describeDefense(
+      cprRoll.resultTotal,
+      attackTotal,
+      attackerName
+    );
+    cprRoll.entityData = { actor: actor.id, token: tokenId || null };
+    if (skill) cprRoll.entityData.item = skill.id;
+    await this.RenderRollCard(cprRoll);
+  }
+
   static async damageApplication(event, clickable) {
     const getEventDatum = (datum) =>
       SystemUtils.GetEventDatum(event, datum, clickable);

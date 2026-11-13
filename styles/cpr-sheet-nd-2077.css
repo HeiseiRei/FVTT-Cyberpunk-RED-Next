@@ -1008,3 +1008,90 @@
     max-height: 1.75rem;
   }
 }
+
+/* Targeted attacks: per-target outcome on attack roll cards and the defender's
+   Evasion result on skill roll cards. */
+.cpr-combat-card .cpr-attack-targets .cpr-block {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.cpr-combat-card .cpr-attack-target,
+.cpr-combat-card .cpr-defense-result {
+  align-items: center;
+  border: 1px solid var(--cpr-combat-border);
+  border-left: 3px solid var(--cpr-combat-muted);
+  border-radius: 0.2rem;
+  color: var(--cpr-combat-ink);
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.3rem 0.45rem;
+}
+
+.cpr-combat-card .cpr-defense-result {
+  margin-top: 0.4rem;
+}
+
+.cpr-combat-card .cpr-attack-target.is-hit,
+.cpr-combat-card .cpr-defense-result.is-hit {
+  border-left-color: var(--cpr-chat-failure);
+}
+
+.cpr-combat-card .cpr-attack-target.is-miss,
+.cpr-combat-card .cpr-defense-result.is-evaded {
+  border-left-color: var(--cpr-chat-success);
+}
+
+.cpr-combat-card .cpr-attack-target-main {
+  display: grid;
+  min-width: 0;
+}
+
+.cpr-combat-card .cpr-attack-target-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cpr-combat-card .cpr-attack-target-meta {
+  color: var(--cpr-combat-muted);
+}
+
+.cpr-combat-card .cpr-attack-target-result {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.4rem;
+}
+
+.cpr-combat-card .cpr-attack-target-badge {
+  font-family: var(--cpr-chat-font-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.cpr-combat-card .is-hit .cpr-attack-target-badge {
+  color: var(--cpr-chat-failure);
+}
+
+.cpr-combat-card .is-miss .cpr-attack-target-badge,
+.cpr-combat-card .is-evaded .cpr-attack-target-badge {
+  color: var(--cpr-chat-success);
+}
+
+.cpr-combat-card a.cpr-attack-target-evade {
+  background: var(--cpr-chat-action-bg);
+  border-radius: 0.2rem;
+  color: var(--cpr-chat-action-text);
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
+  white-space: nowrap;
+}
+
+.cpr-combat-card a.cpr-attack-target-evade:hover {
+  background: var(--cpr-chat-action-hover);
+  text-shadow: none;
+}
