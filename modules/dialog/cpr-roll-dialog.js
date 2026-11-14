@@ -16,13 +16,13 @@ export class CPRRollDialog extends CPRDialog {
     super(rollData, options);
 
     // Set data and options specific to this subclass.
-    this.options.title = rollData.rollTitle;
+    this.dialogOptions.title = rollData.rollTitle;
     this.rollData = rollData;
 
     // Get prototype chain (an array of class name strings) for the rollData.
     this.prototypeChain = SystemUtils.getPrototypeChain(rollData);
     // Set template.
-    this.options.template = rollData.rollPrompt;
+    this.dialogOptions.template = rollData.rollPrompt;
 
     // Set actor and items.
     this.actor = actor;
@@ -42,8 +42,8 @@ export class CPRRollDialog extends CPRDialog {
    *
    * @override
    */
-  async getData() {
-    const data = await super.getData();
+  async _prepareContext(options) {
+    const data = await super._prepareContext(options);
     data.rollData = this.rollData; // CPRRoll object
     data.actor = this.actor;
     data.prototypeChain = this.prototypeChain;
@@ -117,9 +117,8 @@ export class CPRRollDialog extends CPRDialog {
    * @param {*} html
    * @override
    */
-  activateListeners(html) {
-    super.activateListeners(html);
-    if (!this.options.editable) return;
+  _activateListeners(html) {
+    super._activateListeners(html);
 
     html
       .find(".toggle-situational-mod")
@@ -187,9 +186,10 @@ export class CPRRollDialog extends CPRDialog {
    *
    * @param {*} event
    * @param {Object} formData - Updated dialog data to be merged with the original object.
+   * @param {Object} [options] - see CPRDialog#_updateDialogData
    * @override
    */
-  async _updateObject(event, formData) {
+  async _updateDialogData(event, formData, options) {
     const fd = foundry.utils.duplicate(formData);
     if (formData.additionalMods) {
       // Replace all spaces/commas and then split into an array at each comma.
@@ -217,16 +217,18 @@ export class CPRRollDialog extends CPRDialog {
     } else {
       fd.additionalMods = [];
     }
-    super._updateObject(event, fd);
+    return super._updateDialogData(event, fd, options);
   }
 }
 
 export class CPRRoleRollDialog extends CPRRollDialog {
   /**
    * Prepares any data unique to the Role Roll Dialog sheet.
+   *
+   * @override
    */
-  async getData() {
-    const data = await super.getData();
+  async _prepareContext(options) {
+    const data = await super._prepareContext(options);
 
     const skillIsVarying =
       this.item.system.skill === "varying" ||
@@ -257,8 +259,8 @@ export class CPRRoleRollDialog extends CPRRollDialog {
    * @param {*} html
    * @override
    */
-  activateListeners(html) {
-    super.activateListeners(html);
+  _activateListeners(html) {
+    super._activateListeners(html);
     html
       .find(".skill-list-select")
       .change((event) => this._updateSkillValue(event));

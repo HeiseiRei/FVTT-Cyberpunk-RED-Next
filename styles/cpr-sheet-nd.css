@@ -2581,7 +2581,7 @@
   font-size: 0.68rem;
 }
 
-.cpr-nd-weapon-replacement-dialog .dialog-buttons {
+.cpr-nd-weapon-replacement-dialog :is(.dialog-buttons, .form-footer) {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -2590,7 +2590,7 @@
   background: rgb(10 10 12 / 90%);
 }
 
-.cpr-nd-weapon-replacement-dialog .dialog-buttons button {
+.cpr-nd-weapon-replacement-dialog :is(.dialog-buttons, .form-footer) button {
   min-height: 34px;
   padding: 6px 12px;
   border: 1px solid var(--cpr-nd-cyan);
@@ -2602,8 +2602,9 @@
   text-transform: uppercase;
 }
 
-.cpr-nd-weapon-replacement-dialog .dialog-buttons button.default,
-.cpr-nd-weapon-replacement-dialog .dialog-buttons button:hover {
+.cpr-nd-weapon-replacement-dialog :is(.dialog-buttons, .form-footer) button.default,
+.cpr-nd-weapon-replacement-dialog :is(.dialog-buttons, .form-footer) button[autofocus],
+.cpr-nd-weapon-replacement-dialog :is(.dialog-buttons, .form-footer) button:hover {
   border-color: var(--cpr-nd-yellow);
   color: var(--cpr-nd-black);
   background: var(--cpr-nd-yellow);

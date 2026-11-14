@@ -410,7 +410,7 @@ export default class MigrationApp extends HandlebarsApplicationMixin(
    */
   confirmPackSelection() {
     const formElement = this.element.querySelector("form");
-    const fd = new FormDataExtended(formElement);
+    const fd = new foundry.applications.ux.FormDataExtended(formElement);
     const formData = foundry.utils.expandObject(fd.object);
 
     // If single option, `formData.moduleChoices` is not an array.

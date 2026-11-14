@@ -296,7 +296,7 @@ function tableRows(table) {
     .filter((row) => Number.isFinite(row.from) && Number.isFinite(row.to));
 }
 
-async function resolveWeaponDv(actor, weapon, distance) {
+export async function resolveWeaponDv(actor, weapon, distance) {
   const tables = await getDvTables();
   const base = findTable(tables, weapon.system.dvTable);
   if (!base) return null;
@@ -360,7 +360,7 @@ function getDisplayedCenter(token) {
   return context?.clonedToken?.center ?? token.center;
 }
 
-function measureDistance(shooter, target) {
+export function measureDistance(shooter, target) {
   const start = getDisplayedCenter(shooter);
   const end = getDisplayedCenter(target);
   return {
@@ -545,7 +545,6 @@ export default function initializeDistanceDv() {
   Hooks.on("renderApplicationV2", (app, element) => {
     if (app.actor || app.document) addWeaponSelectors(app, element);
   });
-  Hooks.on("renderActorSheet", (app, element) => addWeaponSelectors(app, element));
   Hooks.on("renderApplicationV2", (app, element) => {
     if (app.actor) addWeaponSelectors(app, element);
   });

@@ -15,36 +15,33 @@ const TextEditor = foundry.applications.ux.TextEditor.implementation;
  * @extends {CPRActorSheet}
  */
 export default class CPRContainerActorSheet extends CPRActorSheet {
-  /**
-   * See https://foundryvtt.com/api/v12/classes/client.Application.html for the complete list of options available.
-   *
-   * @override
-   * @returns - sheet options merged with default options in ActorSheet
-   */
-  static get defaultOptions() {
-    const resizeCPRSheets = game.settings.get(
-      game.system.id,
-      "resizeCPRSheets"
-    );
+  static DEFAULT_OPTIONS = {
+    classes: ["cpr-container-sheet-v2"],
+    position: { width: 1000 },
+    window: { icon: "fa-solid fa-box-open", resizable: true },
+  };
 
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      height: resizeCPRSheets ? 750 : "auto",
-      resizable: true,
-      template: `systems/${game.system.id}/templates/actor/cpr-container-sheet.hbs`,
-      width: 1000,
-    });
-  }
+  /** Starting height used when the "resizeCPRSheets" setting is enabled. */
+  static CPR_RESIZED_HEIGHT = 750;
+
+  static PARTS = {
+    sheet: {
+      template:
+        "systems/cyberpunk-red-core/templates/actor/cpr-container-sheet.hbs",
+      scrollable: [".right-content"],
+    },
+  };
 
   /**
    * Get actor data into a more convenient organized structure. This should be called sparingly in code.
-   * Only add new data points to getData when you need a complex struct, not when you only need to add
+   * Only add new data points to the context when you need a complex struct, not when you only need to add
    * new data points to shorten dataPaths.
    *
    * @override
-   * @returns {Object} data - a curated structure of actorSheet data
+   * @returns {Object} context - a curated structure of actorSheet data
    */
-  async getData() {
-    const foundryData = await super.getData();
+  async _prepareContext(options) {
+    const foundryData = await super._prepareContext(options);
     const cprActorData = {};
 
     cprActorData.userOwnedActors = [];
@@ -75,12 +72,19 @@ export default class CPRContainerActorSheet extends CPRActorSheet {
    * parent class, CPRActorSheet.
    *
    * @override
-   * @param {*} html - the DOM object
    */
-  activateListeners(html) {
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    this._activateContainerListeners($(this.element));
+  }
+
+  /**
+   * @param {jQuery} html - the application element
+   */
+  _activateContainerListeners(html) {
     // Selection of trade partner
     html
-      .find('select[name="trade-with-dropdown"')
+      .find('select[name="trade-with-dropdown"]')
       .change((event) => this._setTradePartner(event));
 
     //
@@ -96,8 +100,18 @@ export default class CPRContainerActorSheet extends CPRActorSheet {
     html.find(".eurobucks-open-ledger").click(() => this.showLedger("wealth"));
     // Configure container to purchase items from players
     html.find(".vendor-configure-sell-to").click(() => this._configureSellTo());
+  }
 
-    super.activateListeners(html);
+  /**
+   * The trade partner selection is sheet state rather than actor data, so it is kept out of
+   * the data submitted to the actor.
+   *
+   * @override
+   */
+  _processFormData(event, form, formData) {
+    const data = super._processFormData(event, form, formData);
+    delete data["trade-with-dropdown"];
+    return data;
   }
 
   /**
@@ -555,7 +569,7 @@ export default class CPRContainerActorSheet extends CPRActorSheet {
   }
 
   /**
-   * _onDrop is provided by ActorSheet and extended here. When an Item is dragged to an ActorSheet a new
+   * _onDrop is provided by ActorSheetV2 and extended here. When an Item is dragged to an ActorSheet a new
    * copy is created. This extension ensures players are allowed to create items in the container-actor before doing so.
    *
    * @private
@@ -599,7 +613,7 @@ export default class CPRContainerActorSheet extends CPRActorSheet {
           return;
         }
       }
-      super._onDrop(event);
+      await super._onDrop(event);
     } else {
       SystemUtils.DisplayMessage(
         "warn",

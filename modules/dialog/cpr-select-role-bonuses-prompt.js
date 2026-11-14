@@ -14,8 +14,8 @@ export default class SelectRoleBonuses extends CPRDialog {
     super(dialogData, options);
     this.skillList = dialogData.skillList;
     this.roleData = dialogData.roleData;
-    this.options.template = `systems/${game.system.id}/templates/dialog/cpr-select-role-bonuses-prompt.hbs`;
-    this.options.title = SystemUtils.Localize(
+    this.dialogOptions.template = `systems/${game.system.id}/templates/dialog/cpr-select-role-bonuses-prompt.hbs`;
+    this.dialogOptions.title = SystemUtils.Localize(
       "CPR.dialog.selectRoleBonuses.title"
     );
   }
@@ -25,8 +25,8 @@ export default class SelectRoleBonuses extends CPRDialog {
    *
    * @override
    */
-  async getData() {
-    const data = await super.getData();
+  async _prepareContext(options) {
+    const data = await super._prepareContext(options);
     data.skillList = this.skillList;
     data.roleData = this.roleData;
     return data;
@@ -37,12 +37,14 @@ export default class SelectRoleBonuses extends CPRDialog {
    *
    * @param {*} event - currently not used.
    * @param {Object} formData - Data from the submitted form.
+   * @param {Object} [options]
+   * @param {Boolean} [options.render=true] - re-render the dialog with the new data
    * @override
    */
-  async _updateObject(event, formData) {
+  async _updateDialogData(event, formData, { render = true } = {}) {
     // Convert selected skills into a neat list.
     const bonuses = [];
-    formData.selectedSkills.forEach((s) => {
+    [formData.selectedSkills ?? []].flat().forEach((s) => {
       if (s) bonuses.push(this.skillList.find((a) => a.name === s));
     });
 
@@ -56,12 +58,12 @@ export default class SelectRoleBonuses extends CPRDialog {
     const updatedData = {
       bonusRatio,
       bonuses,
-      universalBonuses: formData.universalBonuses.filter((b) => b),
+      universalBonuses: [formData.universalBonuses ?? []].flat().filter((b) => b),
     };
 
     // Merge above object with our original data.
     // This is then used to update the role item in item-sheet.js (_selectRoleBonuses)
     foundry.utils.mergeObject(this.object.roleData, updatedData);
-    this.render(true); // rerenders the FormApp with the new data.
+    if (render) this.render(); // rerenders the dialog with the new data.
   }
 }

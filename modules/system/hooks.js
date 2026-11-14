@@ -8,6 +8,7 @@ import LOGGER from "../utils/cpr-logger.js";
  * before this change anyway
  */
 const hooksImports = [
+  "actor/auto-derived-stats.js",
   "actor/check-emp-and-luck.js",
   "actor/set-default-image.js",
   "actor/sheet/persist-section-views.js",
@@ -19,6 +20,7 @@ const hooksImports = [
   "actor/update-role-from-item.js",
   "actor/update-role-on-item-delete.js",
   "chat/add-glyphs.js",
+  "chat/auto-damage-socket.js",
   "chat/hide-blind-rolls.js",
   "chat/parse-red-command.js",
   "external/babele.js",

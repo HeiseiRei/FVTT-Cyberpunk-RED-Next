@@ -289,8 +289,9 @@
         {{#each armor as |item|}}
           <div class="cpr-nd-armor-row">
             <button type="button" class="cpr-nd-item-name" data-cpr-nd-action="open-item" data-item-id="{{item.id}}">{{item.name}}</button>
-            {{#if item.system.isHeadLocation}}<span>HEAD <b>{{item.headCurrent}}/{{item.headMax}}</b></span><button type="button" data-cpr-nd-action="ablate-armor" data-location="head" {{#unless ../isEditable}}disabled{{/unless}}>−1</button>{{/if}}
-            {{#if item.system.isBodyLocation}}<span>BODY <b>{{item.bodyCurrent}}/{{item.bodyMax}}</b></span><button type="button" data-cpr-nd-action="ablate-armor" data-location="body" {{#unless ../isEditable}}disabled{{/unless}}>−1</button>{{/if}}
+            {{#if item.system.isHeadLocation}}<span>HEAD <b>{{item.headCurrent}}/{{item.headMax}}</b></span><button type="button" class="cpr-nd-armor-minus" data-cpr-nd-action="ablate-armor" data-location="head" data-tooltip="{{localize "CPR.characterSheetND.armor.ablate"}}" {{#unless ../isEditable}}disabled{{/unless}}>−1</button><button type="button" class="cpr-nd-armor-plus" data-cpr-nd-action="adjust-armor" data-location="head" data-delta="-1" data-tooltip="{{localize "CPR.characterSheetND.armor.restore"}}" {{#unless ../isEditable}}disabled{{/unless}}>+1</button>{{/if}}
+            {{#if item.system.isBodyLocation}}<span>BODY <b>{{item.bodyCurrent}}/{{item.bodyMax}}</b></span><button type="button" class="cpr-nd-armor-minus" data-cpr-nd-action="ablate-armor" data-location="body" data-tooltip="{{localize "CPR.characterSheetND.armor.ablate"}}" {{#unless ../isEditable}}disabled{{/unless}}>−1</button><button type="button" class="cpr-nd-armor-plus" data-cpr-nd-action="adjust-armor" data-location="body" data-delta="-1" data-tooltip="{{localize "CPR.characterSheetND.armor.restore"}}" {{#unless ../isEditable}}disabled{{/unless}}>+1</button>{{/if}}
+            <button type="button" class="repair cpr-nd-armor-repair" data-item-id="{{item.id}}" data-tooltip="{{localize "CPR.actorSheets.commonActions.repair"}}" aria-label="{{localize "CPR.actorSheets.commonActions.repair"}}" {{#unless ../isEditable}}disabled{{/unless}}><i class="fas fa-screwdriver-wrench"></i></button>
           </div>
         {{else}}<p class="cpr-nd-empty">NO EQUIPPED ARMOR</p>{{/each}}
       </section>

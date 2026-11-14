@@ -13,23 +13,25 @@ import CPRDialog from "../../dialog/cpr-dialog-application.js";
  * @extends {CPRActorSheet}
  */
 export default class CPRMookActorSheet extends CPRActorSheet {
-  /**
-   * getter that controls the sheet sizing
-   *
-   * @override
-   */
-  static get defaultOptions() {
-    const resizeCPRSheets = game.settings.get(
-      game.system.id,
-      "resizeCPRSheets"
-    );
+  /** Lets other code identify this sheet without importing the class. */
+  isCPRMookActorSheet = true;
 
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      height: resizeCPRSheets ? 600 : "auto",
-      resizable: true,
-      width: 800,
-    });
-  }
+  static DEFAULT_OPTIONS = {
+    classes: ["cpr-mook-sheet-v2"],
+    position: { width: 800 },
+    window: { icon: "fa-solid fa-user-ninja", resizable: true },
+  };
+
+  /** Starting height used when the "resizeCPRSheets" setting is enabled. */
+  static CPR_RESIZED_HEIGHT = 600;
+
+  static PARTS = {
+    sheet: {
+      template:
+        "systems/cyberpunk-red-core/templates/actor/cpr-mook-sheet.hbs",
+      scrollable: [""],
+    },
+  };
 
   /**
    * Mooks have a separate template when a user only has a "limited" permission level for it.
@@ -40,25 +42,34 @@ export default class CPRMookActorSheet extends CPRActorSheet {
    * https://discord.com/channels/170995199584108546/596076404618166434/864673619098730506
    *
    * @override
-   * @property
-   * @returns {String} - path to a handlebars template
+   * @returns {Object} - the template parts to render
    */
-  get template() {
-    if (!game.user.isGM && this.actor.limited) {
-      return `systems/${game.system.id}/templates/actor/cpr-mook-sheet-limited.hbs`;
+  _configureRenderParts(options) {
+    const parts = super._configureRenderParts(options);
+    if (this._isLimitedView) {
+      parts.sheet.template = `systems/${game.system.id}/templates/actor/cpr-mook-sheet-limited.hbs`;
     }
-    return `systems/${game.system.id}/templates/actor/cpr-mook-sheet.hbs`;
+    return parts;
   }
 
   /**
-   * The Mook sheet goes a little further than actor.getData by tracking whether any armor
+   * Is the current user restricted to the limited view of this mook?
+   *
+   * @returns {Boolean}
+   */
+  get _isLimitedView() {
+    return !game.user.isGM && this.actor.limited;
+  }
+
+  /**
+   * The Mook sheet goes a little further than the common context by tracking whether any armor
    * or weapons (including cyberware weapons) are equipped on the mook.
    *
    * @override
-   * @returns {Object} data - a curated structure of actorSheet data
+   * @returns {Object} context - a curated structure of actorSheet data
    */
-  async getData() {
-    const foundryData = await super.getData();
+  async _prepareContext(options) {
+    const foundryData = await super._prepareContext(options);
     const cprActorData = foundryData.actor.system;
     cprActorData.equippedArmor = this.actor.itemTypes.armor.filter(
       (item) => item.system.equipped === "equipped"
@@ -80,14 +91,20 @@ export default class CPRMookActorSheet extends CPRActorSheet {
   }
 
   /**
-   * Activate listeners for the sheet. This has to call super at the end to get additional
-   * listners that are common between mooks and characters.
+   * Activate listeners for the sheet. The listeners that are common between mooks and
+   * characters are activated by the parent class.
    *
    * @override
-   * @param {Object} html - the DOM object
    */
-  activateListeners(html) {
-    super.activateListeners(html);
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    this._activateMookListeners($(this.element));
+  }
+
+  /**
+   * @param {jQuery} html - the application element
+   */
+  _activateMookListeners(html) {
     html.find(".mod-mook-skill").click(() => this._modMookSkills());
     html.find(".change-mook-name").click(() => this._changeMookName());
     html

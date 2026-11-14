@@ -11,15 +11,10 @@ const ResizeName = () => {
    * @param {CPRActorSheet} app - application object (unused)
    * @param {Object} html - HTML DOM object
    */
-  Hooks.on("renderActorSheet", (_, html) => {
-    const inputElement = html.find('input[name="name"]');
-    if (inputElement.length) {
-      window.requestAnimationFrame(() => {
-        SheetUtils.adjustFontSizeToFit(inputElement);
-      });
-    }
-  });
+  // Every CPR Actor Sheet is an AppV2 application. The hook is limited to Actor sheets,
+  // as the AppV1 "renderActorSheet" hook it replaces was.
   Hooks.on("renderApplicationV2", (app) => {
+    if (!(app.document instanceof Actor)) return;
     const inputElement = app.element?.querySelector('input[name="name"]');
     if (inputElement) {
       window.requestAnimationFrame(() => {
