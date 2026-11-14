@@ -458,7 +458,7 @@ function CPRActorSheetMixin(Base, isV2 = false) {
     // Listeners for editable fields under here. Fields might not be editable because
     // the user viewing the sheet might not have permission to. They may not be the owner.
 
-    $("input[type=text]").focusin(() => $(this).select());
+    html.find("input[type=text]").focusin((event) => event.currentTarget.select());
 
     // Render Item Card
     html.find(".item-edit").click((event) => this._renderItemCard(event));
@@ -1682,11 +1682,11 @@ function CPRActorSheetMixin(Base, isV2 = false) {
    */
   async _applyContentFilter(event) {
     const filterValue = event.currentTarget.value;
-    const num = $(".filter-contents").val();
     this.cprContentFilter = filterValue;
     if (isV2) await this.render({ force: true });
     else await this._render();
-    $(".filter-contents").focus().val("").val(num);
+    const sheetElement = this.element instanceof HTMLElement ? this.element : this.element?.[0];
+    sheetElement?.querySelector(".filter-contents")?.focus();
   }
 
   /**
