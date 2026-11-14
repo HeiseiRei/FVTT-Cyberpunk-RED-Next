@@ -804,7 +804,7 @@ export default class CPRCharacterActorSheetND extends CPRCharacterActorSheetV2 {
         await tokenizer.api.openEditor(this.document, this.token);
         return;
       }
-      new FilePicker({
+      new foundry.applications.apps.FilePicker.implementation({
         type: "image",
         current: this.document.img,
         callback: async (path) => {
@@ -973,12 +973,6 @@ export default class CPRCharacterActorSheetND extends CPRCharacterActorSheetV2 {
     if (action === "ablate-armor") {
       if (!this.isEditable) return;
       await this.document.ablateArmor(target.dataset.location, 1);
-      return;
-    }
-    if (action === "open-item") {
-      const item = this.document.items.get(id);
-      if (!item) throw new Error(`Item ${id} is no longer on this character.`);
-      item.sheet.render(true);
     }
   }
 

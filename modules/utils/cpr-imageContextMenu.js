@@ -17,8 +17,9 @@ export default function createImageContextMenu(
       name: SystemUtils.Format("CPR.sheets.image.showPlayers"),
       icon: '<i class="fas fa-eye"></i>',
       callback: () => {
-        const popout = new ImagePopout(data.img, {
-          title: data.name,
+        const popout = new foundry.applications.apps.ImagePopout({
+          src: data.img,
+          window: { title: data.name },
           shareable: true,
         });
         popout.render(true);

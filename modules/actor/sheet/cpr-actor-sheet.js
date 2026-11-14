@@ -1480,6 +1480,22 @@ function CPRActorSheetMixin(Base, isV2 = false) {
       : super._onDrop(event);
   }
 
+  /**
+   * Remember the Item created by a drop on an AppV2 sheet so _cprOnItemDrop can
+   * finish the transfer (delete the source Item and its installed Items).
+   *
+   * @override
+   */
+  async _onDropItem(event, item) {
+    const result = await super._onDropItem(event, item);
+    if (isV2) {
+      // Sorting an Item the actor already owns resolves to that same Item; only a
+      // newly created Item counts as a completed transfer.
+      this._cprDroppedItem = result && result !== item ? result : null;
+    }
+    return result;
+  }
+
   async _cprOnItemDrop(event) {
     const dragData = TextEditor.getDragEventData(event);
     let sourceActor;
@@ -1531,7 +1547,18 @@ function CPRActorSheetMixin(Base, isV2 = false) {
     const deleteList = transferItem ? [sourceItem._id] : [];
     const containerTypes = SystemUtils.getDocTypesFromMixin("container");
 
-    const [newItem] = await super._onDrop(event);
+    // AppV1 ActorSheet#_onDrop resolves to the created Items. ActorSheetV2#_onDrop
+    // resolves to nothing, so the created Item is captured in _onDropItem instead.
+    let newItem;
+    if (isV2) {
+      this._cprDroppedItem = null;
+      await super._onDrop(event);
+      newItem = this._cprDroppedItem;
+      this._cprDroppedItem = null;
+    } else {
+      const created = await super._onDrop(event);
+      newItem = Array.isArray(created) ? created[0] : null;
+    }
 
     // If we created a new item and the sourceItem is a container type the createItem hook ensures all of the
     // installed items are also created on the target actor. We need to ensure that those items are

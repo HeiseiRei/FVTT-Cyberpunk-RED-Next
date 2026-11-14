@@ -93,7 +93,7 @@
                     </div>
                     <div class="cpr-nd-inventory-amount">
                       {{#if row.hasAmount}}
-                        <label><span>×</span><input class="gear-amount-input" type="number" min="0" name="item.system.amount" data-item-prop="item.system.amount" data-item-id="{{row.item.id}}" value="{{row.item.system.amount}}" aria-label="Amount of {{row.item.name}}" {{#unless ../../../isEditable}}disabled{{/unless}}></label>
+                        <label><span>×</span><input class="gear-amount-input" type="number" min="0" name="item.system.amount" data-item-prop="item.system.amount" data-item-id="{{row.item.id}}" value="{{row.item.system.amount}}" aria-label="Amount of {{row.item.name}}" {{#unless ../../isEditable}}disabled{{/unless}}></label>
                       {{else}}<span class="cpr-nd-no-amount">—</span>{{/if}}
                     </div>
                     <div class="gear-actions cpr-nd-inventory-actions actions">
@@ -146,7 +146,7 @@
         <div class="cpr-nd-panel-label"><span>03 // DEATH SAVE</span><span class="cpr-nd-crimson">CRITICAL</span></div>
         <div class="cpr-nd-death-content">
           <img src="systems/cyberpunk-red-core/icons/sheets/cpr-sheet-nd/raven.svg" alt="">
-          <div data-tooltip="Death save: {{actor.system.derivedStats.deathSave.penalty}}<br>Critical injury: {{actor.system.derivedStats.deathSave.basePenalty}}"><small>DEATH SAVE / PENALTY</small><strong>{{actor.system.derivedStats.deathSave.value}}</strong></div>
+          <div data-tooltip-html="Death save: {{actor.system.derivedStats.deathSave.penalty}}&lt;br&gt;Critical injury: {{actor.system.derivedStats.deathSave.basePenalty}}"><small>DEATH SAVE / PENALTY</small><strong>{{actor.system.derivedStats.deathSave.value}}</strong></div>
           <button type="button" data-cpr-nd-action="roll-death-save" data-roll-title="ROLL DEATH SAVE">ROLL <i class="fa-solid fa-skull-crossbones"></i></button>
         </div>
       </section>
